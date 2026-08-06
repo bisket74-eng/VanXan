@@ -1,4 +1,4 @@
-import { createApi, games, itinerary, getPartyTime, minutesFrom24h, config } from "./shared.js?v=4.0.0";
+import { createApi, games, itinerary, getPartyTime, minutesFrom24h, config } from "./shared.js?v=5.0.0";
 
 const api = await createApi();
 const cfg = config();
@@ -21,7 +21,7 @@ function showToast(message) {
   toast.textContent = message;
   toast.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.classList.remove("show"), 3200);
+  toastTimer = setTimeout(() => toast.classList.remove("show"), 3600);
 }
 
 function showConnectionError(error) {
@@ -106,7 +106,9 @@ function addNameField(value = "") {
 }
 
 function openGuestbook() {
-  $("#guestbookFormError").textContent = "";
+  const errorLine = $("#guestbookFormError");
+  errorLine.textContent = "";
+  errorLine.hidden = true;
   const fields = $("#guestNameFields");
   fields.innerHTML = "";
   const existing = deviceState.guests || [];
@@ -116,7 +118,9 @@ function openGuestbook() {
   $("#messageCharacterCount").textContent = $("#guestbookMessage").value.length;
   $("#submitGuestbookButton").textContent = existing.length ? "Update Check-In" : "Check Everyone In";
   guestbookDialog.showModal();
-  setTimeout(() => fields.querySelector("input")?.focus(), 80);
+  const card = guestbookDialog.querySelector(".modal-card");
+  card?.scrollTo({ top: 0, behavior: "auto" });
+  setTimeout(() => fields.querySelector("input")?.focus(), 100);
 }
 
 async function refreshDeviceState() {
@@ -170,29 +174,40 @@ $("#guestbookForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const errorLine = $("#guestbookFormError");
   errorLine.textContent = "";
+  errorLine.hidden = true;
   const rawNames = [...$("#guestNameFields").querySelectorAll("input")].map((input) => input.value.trim()).filter(Boolean);
   const names = [...new Map(rawNames.map((name) => [name.toLowerCase(), name])).values()];
   const message = $("#guestbookMessage").value.trim();
   if (!names.length) {
     errorLine.textContent = "Please enter at least one guest name.";
+    errorLine.hidden = false;
+    guestbookDialog.querySelector(".modal-card")?.scrollTo({ top: 0, behavior: "smooth" });
     return $("#guestNameFields input")?.focus();
   }
   const button = $("#submitGuestbookButton");
   button.disabled = true;
   button.textContent = "Checking everyone in…";
   try {
-    const rows = await api.registerGuests(names, message);
+    const result = await api.registerGuests(names, message);
+    const rows = Array.isArray(result) ? result : (result?.rows || []);
     await refreshDeviceState();
-    guestbookDialog.close();
     document.activeElement?.blur?.();
-    showToast(`${rows?.length || names.length} ${names.length === 1 ? "person is" : "people are"} checked in.`);
+    guestbookDialog.close();
+    $("#guestbookForm").reset();
+    $("#messageCharacterCount").textContent = "0";
+    const count = rows.length || names.length;
+    showToast(result?.messageSaved === false
+      ? `${count} ${count === 1 ? "person is" : "people are"} checked in. Run the V5 repair SQL to enable keepsake messages.`
+      : `${count} ${count === 1 ? "person is" : "people are"} checked in.`);
   } catch (error) {
     const rawMessage = error?.message || "The names could not be saved.";
     const needsUpgrade = /webbing_register_guests|p_message|schema cache|could not find the function/i.test(rawMessage);
     errorLine.textContent = needsUpgrade
-      ? "The website is connected, but Supabase still needs the new setup-or-upgrade SQL. Run that SQL once, then try again."
-      : rawMessage;
-    showToast("Check-in was not saved. Please read the message in the guestbook window.");
+      ? "The guest list is connected, but it still needs the short Version 5 Supabase repair SQL. Run that repair once, refresh this page, and try again."
+      : `Check-in was not saved: ${rawMessage}`;
+    errorLine.hidden = false;
+    guestbookDialog.querySelector(".modal-card")?.scrollTo({ top: 0, behavior: "smooth" });
+    showToast("Check-in was not saved. The exact error is shown at the top of the guestbook.");
   } finally {
     button.disabled = false;
     button.textContent = deviceState.guests?.length ? "Update Check-In" : "Check Everyone In";
@@ -220,6 +235,14 @@ $("#gameForm").addEventListener("submit", async (event) => {
     button.textContent = "Save Players";
   }
 });
+
+function syncVisualViewport() {
+  const height = window.visualViewport?.height || window.innerHeight;
+  document.documentElement.style.setProperty("--visible-height", `${height}px`);
+}
+window.visualViewport?.addEventListener("resize", syncVisualViewport);
+window.addEventListener("resize", syncVisualViewport);
+syncVisualViewport();
 
 renderItinerary();
 renderGames();

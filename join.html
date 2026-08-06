@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Great+Vibes&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=4.0.0">
+  <link rel="stylesheet" href="./styles.css?v=5.0.0">
 </head>
 <body class="guest-page">
   <div class="ornate-border" aria-hidden="true"><span class="web-corner web-tl"></span><span class="web-corner web-tr"></span><span class="web-corner web-bl"></span><span class="web-corner web-br"></span></div>
@@ -77,13 +77,13 @@
       <button class="modal-close" type="button" data-close-dialog aria-label="Close guestbook">×</button>
       <p class="eyebrow">Welcome!</p>
       <h2>Sign the Guestbook</h2>
-      <p>Enter each person separately. You may add up to ten names from this phone.</p>
+      <p class="modal-intro">Enter each person separately. You may add up to ten names from this phone.</p>
+      <p id="guestbookFormError" class="form-error" aria-live="assertive" hidden></p>
       <div id="guestNameFields" class="name-fields"></div>
       <button id="addGuestFieldButton" class="text-button" type="button">+ Add another name</button>
       <label class="message-label" for="guestbookMessage">Leave Savannah &amp; Xander a message <span>(optional)</span></label>
-      <textarea id="guestbookMessage" maxlength="1000" rows="4" placeholder="Share a wish, a memory, or a note for their keepsake guestbook."></textarea>
+      <textarea id="guestbookMessage" maxlength="1000" rows="3" placeholder="Share a wish, a memory, or a note for their keepsake guestbook."></textarea>
       <div class="character-count"><span id="messageCharacterCount">0</span>/1000</div>
-      <p id="guestbookFormError" class="form-error" aria-live="polite"></p>
       <div class="form-submit"><button class="primary-button" id="submitGuestbookButton" type="submit">Check Everyone In</button></div>
     </form>
   </dialog>
@@ -114,7 +114,7 @@
       caches.keys().then((keys) => Promise.all(keys.filter((key) => key.startsWith("webbing-party-")).map((key) => caches.delete(key)))).catch(() => {});
     }
   </script>
-  <script src="./supabase-config.js?v=4.0.0"></script>
-  <script type="module" src="./join.js?v=4.0.0"></script>
+  <script src="./supabase-config.js?v=5.0.0"></script>
+  <script type="module" src="./join.js?v=5.0.0"></script>
 </body>
 </html>

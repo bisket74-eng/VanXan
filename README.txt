@@ -1,50 +1,37 @@
-SAVANNAH & XANDER ENGAGEMENT PARTY WEBSITE
+SAVANNAH & XANDER ENGAGEMENT PARTY WEBSITE — VERSION 4
 
-WHAT IS INCLUDED
-- join.html: public guest page for the poster QR code
-- host.html: separate private host dashboard
-- setup.sql: one-time Supabase database setup
-- supabase-config.js: paste your Supabase URL and anon key here
-- index.html: sends visitors to join.html
-- all design, JavaScript, icons, PWA manifest, and service worker files
+THIS VERSION FIXES
+- Guest names save when Check Everyone In is pressed.
+- The guestbook window closes automatically after a successful save.
+- Guests may enter up to ten names and one keepsake message.
+- The host page has simple expandable sections: Itinerary, Signed-In Names, Game Signups, Guestbook, and Party Controls.
+- The Guestbook opens as decorated swipeable pages with the message in script and the signers' names.
+- Spider artwork is inline in the HTML so it cannot break because an image file is missing.
+- Old service-worker caches are removed so phones do not keep showing the earlier broken version.
+- The blurry modal backdrop and hidden sticky bottom button were removed.
 
-PUBLIC URL AFTER GITHUB PAGES IS TURNED ON
-https://bisket74-eng.github.io/webbing/join.html
+IMPORTANT UPDATE ORDER
+1. In Supabase, open SQL Editor > New query.
+2. Paste the ENTIRE setup-or-upgrade.sql file and press Run.
+3. Wait for a success message.
+4. In GitHub, open the webbing repository.
+5. Delete or replace the old site files with every file and folder from this package. Keep the assets folder.
+6. Commit the changes.
+7. Wait about two minutes for GitHub Pages.
+8. On the phone, close the old tab completely and reopen join.html with ?v=4 added once.
 
-PRIVATE HOST URL
-https://bisket74-eng.github.io/webbing/host.html
-Do not put the host URL on the poster.
+GUEST PAGE
+https://bisket74-eng.github.io/webbing/join.html?v=4
 
-INITIAL HOST PIN
-4826
-You can change it from the bottom of host.html after Supabase is connected.
+HOST PAGE
+https://bisket74-eng.github.io/webbing/host.html?v=4
+Initial PIN: 4826
 
-SUPABASE SETUP
-1. Open the Supabase project you want to use.
-2. Open SQL Editor.
-3. Create a new query, paste the entire setup.sql file, and click Run.
-4. Open Project Settings > API.
-5. Copy the Project URL and anon/public key.
-6. Open supabase-config.js and replace both PASTE_... values.
-
-GITHUB SETUP
-1. Create a repository named webbing under bisket74-eng.
-2. Upload every file and the assets folder, keeping the folders exactly as shown.
-3. Open repository Settings > Pages.
-4. Choose Deploy from a branch, main, /(root), then Save.
-5. Wait a minute or two and open the public URL above.
-
-PREVIEW MODE
-The files work before Supabase is connected, but data is then stored only in the current browser. A yellow preview warning appears. Connect Supabase before giving guests the QR code.
-
-LIVE ITINERARY HIGHLIGHT
-On August 15, 2026, the current activity highlights automatically using Pacific time.
-For testing, add ?demo=18:22 to the guest URL, for example:
-join.html?demo=18:22
-
-GUESTBOOK AND GAMES
-- Guests tap Sign the Guestbook and may enter up to ten individual names.
-- Names do not appear publicly.
-- The game list stays clean; tapping a game opens the names checked in from that phone.
-- The host page can add, edit, delete, and move guests into or out of any game.
-- Copy All Names makes it easy to paste attendance into the Bingo app.
+TEST
+- Open the guest page.
+- Tap Sign the Guestbook.
+- Enter a name and optional message.
+- Tap Check Everyone In.
+- The window should close and a success message should appear.
+- Open the host page, enter 4826, open Signed-In Names, and confirm the name is present.
+- Open Guestbook and swipe through the decorated message pages.

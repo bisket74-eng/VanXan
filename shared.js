@@ -1,5 +1,5 @@
 const CONFIG = window.WEBBING_CONFIG || {};
-const DEVICE_KEY = "webbing_party_device_v3";
+const DEVICE_KEY = "webbing_party_device_v3"; // Keep the same key so prior check-ins remain tied to this phone.
 const LOCAL_DB_KEY = "webbing_party_preview_v3";
 const VALID_GAMES = ["saran", "house", "bingo", "pinata"];
 
@@ -107,11 +107,34 @@ async function createSupabaseApi() {
   return {
     mode: "supabase",
     deviceId: getDeviceId(),
-    registerGuests: (names, message) => rpc("webbing_register_guests", {
-      p_device_id: getDeviceId(),
-      p_names: names,
-      p_message: message
-    }),
+    registerGuests: async (names, message) => {
+      const args = { p_device_id: getDeviceId(), p_names: names, p_message: message };
+      const missingFunction = (error) => /could not find|schema cache|function .* does not exist|404/i.test(String(error?.message || error));
+
+      // Version 5 uses a new, unambiguous RPC name so Supabase cannot confuse it
+      // with an older overloaded function cached by PostgREST.
+      try {
+        const rows = await rpc("webbing_check_in_guests", args);
+        return { rows: Array.isArray(rows) ? rows : [], messageSaved: true };
+      } catch (firstError) {
+        if (!missingFunction(firstError)) throw firstError;
+      }
+
+      // Compatibility with the Version 4 database function.
+      try {
+        const rows = await rpc("webbing_register_guests", args);
+        return { rows: Array.isArray(rows) ? rows : [], messageSaved: true };
+      } catch (secondError) {
+        if (!missingFunction(secondError)) throw secondError;
+      }
+
+      // Last-resort compatibility with the original two-argument check-in.
+      const rows = await rpc("webbing_register_guests", {
+        p_device_id: getDeviceId(),
+        p_names: names
+      });
+      return { rows: Array.isArray(rows) ? rows : [], messageSaved: false };
+    },
     getDeviceState: () => rpc("webbing_get_device_state", { p_device_id: getDeviceId() }),
     saveGame: (gameKey, guestIds) => rpc("webbing_save_game", {
       p_device_id: getDeviceId(),
@@ -185,7 +208,7 @@ function createLocalApi() {
         rows.push({ id: guest.id, name: guest.name });
       }
       writeLocalDb(db);
-      return rows;
+      return { rows, messageSaved: true };
     },
 
     async getDeviceState() {

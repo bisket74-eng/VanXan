@@ -1,4 +1,4 @@
-import { createApi, games, itinerary } from "./shared.js?v=4.0.0";
+import { createApi, games, itinerary } from "./shared.js?v=5.0.0";
 
 const api = await createApi();
 const $ = (selector) => document.querySelector(selector);

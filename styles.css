@@ -207,3 +207,99 @@ hr { margin: 22px 0; border: 0; border-top: 1px solid var(--line); }
   .print-guestbook .guestbook-book { display: block; overflow: visible; }
   .print-guestbook .guestbook-page { min-height: 9in; margin: 0 0 .2in; break-after: page; box-shadow: none; }
 }
+
+
+/* VERSION 5 — tighter mobile layout and dependable guestbook controls */
+.ornate-border {
+  inset: 6px;
+  border: 2px solid rgba(184,137,56,.78);
+  box-shadow: none;
+}
+.site-shell, .host-shell {
+  padding-top: 12px;
+  padding-bottom: calc(24px + env(safe-area-inset-bottom));
+}
+.hero { padding-top: 8px; padding-bottom: 14px; }
+.hero h1 { margin-bottom: 12px; }
+.event-details { gap: 2px; }
+.panel { margin: 10px 0; padding: clamp(17px, 4vw, 24px); border-radius: 23px; }
+.section-copy { margin: 11px 0 14px; line-height: 1.48; }
+.itinerary-heading { margin-bottom: 12px; }
+.itinerary-list { gap: 7px; }
+.itinerary-item { min-height: 58px; padding: 10px 13px; border-radius: 14px; }
+.ring-note, .bingo-note { margin-top: 12px; padding: 10px 12px; }
+.game-list { gap: 7px; }
+.game-row { min-height: 61px; }
+
+.modal-dialog {
+  width: min(540px, calc(100% - 16px));
+  max-height: calc(var(--visible-height, 100dvh) - 12px);
+  margin: max(6px, env(safe-area-inset-top)) auto 6px;
+  border-radius: 22px;
+}
+.modal-card {
+  display: block;
+  max-height: calc(var(--visible-height, 100dvh) - 12px);
+  padding: 16px 14px max(10px, env(safe-area-inset-bottom));
+  border-radius: 22px;
+  scroll-padding-top: 12px;
+  scroll-padding-bottom: 88px;
+}
+.modal-close { top: 10px; right: 10px; }
+.modal-card .eyebrow { margin-bottom: 2px; padding-right: 42px; }
+.modal-card h2 { padding-right: 42px; font-size: clamp(2.55rem, 12vw, 3.25rem); line-height: .9; }
+.modal-intro { margin: 10px 0 8px; line-height: 1.4 !important; }
+.name-fields { gap: 7px; margin-top: 10px; }
+.name-row { grid-template-columns: 1fr 38px; gap: 6px; }
+.name-row input { min-height: 52px; padding: 10px 13px; }
+.remove-name-button { width: 38px; min-height: 46px; }
+.text-button { margin: 8px 0 5px; padding: 7px 3px; }
+.message-label { margin: 8px 0 5px; font-size: 1.15rem; }
+.modal-card textarea { min-height: 88px; padding: 11px 13px; resize: vertical; }
+.character-count { margin-top: 2px; }
+.form-error {
+  margin: 8px 0 4px;
+  padding: 9px 11px;
+  min-height: 0;
+  border: 1px solid #e2a7b0;
+  border-radius: 12px;
+  color: #8a1f32;
+  background: #fff0f2;
+  font-size: .9rem;
+  line-height: 1.35;
+}
+.form-error:empty { display: none; }
+.form-submit {
+  position: sticky;
+  z-index: 5;
+  bottom: calc(-1 * max(10px, env(safe-area-inset-bottom)));
+  margin: 10px -2px 0;
+  padding: 10px 2px max(10px, env(safe-area-inset-bottom));
+  background: linear-gradient(to bottom, rgba(255,250,240,0), var(--cream) 26%, var(--cream));
+}
+.form-submit .primary-button { min-height: 54px; box-shadow: 0 8px 18px rgba(23,63,45,.22); }
+.toast {
+  top: calc(10px + env(safe-area-inset-top));
+  bottom: auto;
+  border-radius: 14px;
+  transform: translate(-50%, -18px);
+}
+.toast.show { transform: translate(-50%, 0); }
+
+@media (max-width: 600px) {
+  .site-shell, .host-shell { width: min(100% - 14px, 760px); }
+  .hero { padding-inline: 50px; }
+  .spider { top: 28px; width: 62px; height: 62px; }
+  .panel { padding: 17px 14px; }
+  .modal-dialog { width: calc(100% - 12px); }
+}
+
+@media (max-width: 390px) {
+  .hero { padding-inline: 45px; }
+  .hero h1 span, .hero h1 strong { font-size: 2.82rem; }
+  .hero h1 em { font-size: 1.72rem; }
+  .event-details { font-size: 1rem; }
+  .itinerary-item, .itinerary-item.active { grid-template-columns: 84px 1fr; min-height: 54px; padding: 9px 10px; }
+  .modal-card { padding-inline: 12px; }
+  .modal-card h2 { font-size: 2.75rem; }
+}
