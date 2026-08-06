@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#173f2d">
+  <meta name="description" content="Sign the guestbook, view the live itinerary, and sign up to play at Savannah and Xander's engagement party.">
+  <title>Savannah &amp; Xander's Engagement Party</title>
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body class="guest-page">
+  <div class="page-frame" aria-hidden="true"></div>
+
+  <main class="site-shell">
+    <header class="hero" aria-labelledby="page-title">
+      <img class="spider spider-left" src="./assets/spider-female.svg" alt="A little spider wearing a purple bow">
+      <img class="spider spider-right" src="./assets/spider-male.svg" alt="A little spider wearing a green bow tie">
+      <div class="gold-flourish" aria-hidden="true">✦ ♡ ✦</div>
+      <h1 id="page-title"><span>Savannah &amp;</span><strong>Xander’s</strong><em>Engagement Party</em></h1>
+      <div class="event-details" aria-label="Event details">
+        <p><span aria-hidden="true">▣</span> Saturday, August 15, 2026</p>
+        <p><span aria-hidden="true">◷</span> 3:00 PM – 8:00 PM</p>
+        <p><span aria-hidden="true">●</span> Pinebrook Neighborhood Clubhouse<br><small>Vancouver, WA 98684</small></p>
+      </div>
+    </header>
+
+    <div id="previewBanner" class="preview-banner" hidden>
+      Preview mode is on. Connect Supabase before sharing the QR code so every phone uses the same guest list.
+    </div>
+
+    <section class="panel guestbook-panel" aria-labelledby="guestbook-title">
+      <div class="section-heading compact-heading">
+        <span aria-hidden="true">✎</span>
+        <div>
+          <p class="eyebrow">First, please</p>
+          <h2 id="guestbook-title">Sign the Guestbook</h2>
+        </div>
+      </div>
+      <p class="section-copy">
+        Please enter <strong>every person in your party by name</strong>. One person may check in everyone using the same phone. These names will help us prepare the Bingo game.
+      </p>
+      <button class="primary-button" id="openGuestbookButton" type="button">Sign the Guestbook</button>
+      <p id="guestbookStatus" class="status-line" aria-live="polite"></p>
+    </section>
+
+    <section class="panel itinerary-panel" aria-labelledby="itinerary-title">
+      <div class="section-heading itinerary-heading">
+        <div>
+          <p class="eyebrow">Follow along</p>
+          <h2 id="itinerary-title">Full Itinerary</h2>
+        </div>
+        <div class="live-clock" aria-live="polite">
+          <span class="clock-dot" aria-hidden="true"></span>
+          <span id="currentTimeLabel">Current time</span>
+        </div>
+      </div>
+      <div id="itineraryList" class="itinerary-list"></div>
+      <p class="ring-note"><span aria-hidden="true">◇</span> Start searching for hidden engagement rings as soon as you arrive. Keep every ring you find until the ring count.</p>
+    </section>
+
+    <section class="panel games-panel" aria-labelledby="games-title">
+      <div class="section-heading compact-heading">
+        <span aria-hidden="true">☆</span>
+        <div>
+          <p class="eyebrow">Choose your fun</p>
+          <h2 id="games-title">Sign Up to Play</h2>
+        </div>
+      </div>
+      <p class="section-copy">Tap a game to choose which checked-in guests would like to play.</p>
+      <div id="gameList" class="game-list"></div>
+      <p class="bingo-note">Printed bingo cards will be available if needed.</p>
+    </section>
+
+    <footer class="site-footer">
+      <span>Two little spiders, one big celebration.</span>
+    </footer>
+  </main>
+
+  <dialog id="guestbookDialog" class="modal-dialog">
+    <form id="guestbookForm" class="modal-card" method="dialog">
+      <button class="modal-close" type="button" data-close-dialog aria-label="Close">×</button>
+      <p class="eyebrow">Welcome!</p>
+      <h2>Sign the Guestbook</h2>
+      <p>Enter each person separately. You may add up to ten names from this phone.</p>
+      <div id="guestNameFields" class="name-fields"></div>
+      <button id="addGuestFieldButton" class="text-button" type="button">+ Add another name</button>
+      <div class="modal-actions">
+        <button class="secondary-button" type="button" data-close-dialog>Cancel</button>
+        <button class="primary-button" id="submitGuestbookButton" type="submit">Check Everyone In</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="gameDialog" class="modal-dialog">
+    <form id="gameForm" class="modal-card" method="dialog">
+      <button class="modal-close" type="button" data-close-dialog aria-label="Close">×</button>
+      <p class="eyebrow">Game signup</p>
+      <h2 id="gameDialogTitle">Choose Players</h2>
+      <p id="gameDialogCopy">Select everyone from this phone who wants to play.</p>
+      <div id="gameGuestChoices" class="choice-list"></div>
+      <div id="noDeviceGuests" class="empty-state" hidden>
+        <p>Please sign the guestbook first so the players’ names are available.</p>
+        <button id="openGuestbookFromGame" class="secondary-button" type="button">Sign the Guestbook</button>
+      </div>
+      <div class="modal-actions" id="gameModalActions">
+        <button class="secondary-button" type="button" data-close-dialog>Cancel</button>
+        <button class="primary-button" id="saveGameButton" type="submit">Save Players</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="./supabase-config.js"></script>
+  <script type="module" src="./join.js"></script>
+</body>
+</html>

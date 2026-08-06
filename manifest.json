@@ -1,0 +1,11 @@
+{
+  "name": "Savannah & Xander's Engagement Party",
+  "short_name": "Engagement Party",
+  "start_url": "./join.html",
+  "display": "standalone",
+  "background_color": "#fffaf0",
+  "theme_color": "#173f2d",
+  "icons": [
+    { "src": "./assets/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
