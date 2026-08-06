@@ -16,9 +16,9 @@ export const itinerary = [
 
 export const games = [
   { key: "saran", title: "Saran Wrap Ball", icon: "🧶", detail: "4:15–4:45 PM" },
-  { key: "house", title: "Build Us a House", icon: "🏠", detail: "Spaghetti-and-marshmallow challenge" },
-  { key: "bingo", title: "Bingo", icon: "▦", detail: "Played during dessert" },
-  { key: "pinata", title: "Piñata", icon: "★", detail: "During the 4:45 activity block" }
+  { key: "house", title: "Build Us a House", icon: "🏠", detail: "4:45–5:30 PM • Spaghetti-and-marshmallow challenge" },
+  { key: "bingo", title: "Bingo", icon: "▦", detail: "6:15–6:45 PM • During dessert" },
+  { key: "pinata", title: "Piñata", icon: "♡", detail: "4:45–5:30 PM • During the activity block" }
 ];
 
 function configured() {
@@ -104,37 +104,74 @@ async function createSupabaseApi() {
     return payload;
   }
 
+  async function uploadGuestbookPhoto(file) {
+    if (!(file instanceof Blob)) throw new Error("Choose a photo first.");
+    const extension = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
+    const unique = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    const path = `${getDeviceId()}/${Date.now()}-${unique}.${extension}`;
+    let response;
+    try {
+      response = await fetch(`${base}/storage/v1/object/guestbook-photos/${encodeURI(path)}`, {
+        method: "POST",
+        headers: {
+          apikey: key,
+          Authorization: `Bearer ${key}`,
+          "Content-Type": file.type || "image/jpeg",
+          "x-upsert": "false"
+        },
+        body: file
+      });
+    } catch {
+      throw new Error("The photo could not be uploaded. Check the internet connection and try again.");
+    }
+    const text = await response.text();
+    if (!response.ok) {
+      let message = text;
+      try {
+        const payload = JSON.parse(text);
+        message = payload?.message || payload?.error || text;
+      } catch {}
+      throw new Error(message || `Photo upload failed (${response.status}).`);
+    }
+    return path;
+  }
+
+  function publicPhotoUrl(path) {
+    if (!path) return "";
+    if (/^(data:|blob:|https?:)/i.test(path)) return path;
+    return `${base}/storage/v1/object/public/guestbook-photos/${encodeURI(path)}`;
+  }
+
   return {
     mode: "supabase",
     deviceId: getDeviceId(),
-    registerGuests: async (names, message) => {
-      const args = { p_device_id: getDeviceId(), p_names: names, p_message: message };
+    registerGuests: async (names, message, photoPath = "") => {
+      const args = { p_device_id: getDeviceId(), p_names: names, p_message: message, p_photo_path: photoPath || "" };
       const missingFunction = (error) => /could not find|schema cache|function .* does not exist|404/i.test(String(error?.message || error));
 
-      // Version 5 uses a new, unambiguous RPC name so Supabase cannot confuse it
-      // with an older overloaded function cached by PostgREST.
       try {
-        const rows = await rpc("webbing_check_in_guests", args);
-        return { rows: Array.isArray(rows) ? rows : [], messageSaved: true };
+        const rows = await rpc("webbing_check_in_v6", args);
+        return { rows: Array.isArray(rows) ? rows : [], messageSaved: true, photoSaved: true };
       } catch (firstError) {
         if (!missingFunction(firstError)) throw firstError;
       }
 
-      // Compatibility with the Version 4 database function.
       try {
-        const rows = await rpc("webbing_register_guests", args);
-        return { rows: Array.isArray(rows) ? rows : [], messageSaved: true };
+        const rows = await rpc("webbing_check_in_guests", {
+          p_device_id: getDeviceId(), p_names: names, p_message: message
+        });
+        return { rows: Array.isArray(rows) ? rows : [], messageSaved: true, photoSaved: false };
       } catch (secondError) {
         if (!missingFunction(secondError)) throw secondError;
       }
 
-      // Last-resort compatibility with the original two-argument check-in.
       const rows = await rpc("webbing_register_guests", {
-        p_device_id: getDeviceId(),
-        p_names: names
+        p_device_id: getDeviceId(), p_names: names, p_message: message
       });
-      return { rows: Array.isArray(rows) ? rows : [], messageSaved: false };
+      return { rows: Array.isArray(rows) ? rows : [], messageSaved: true, photoSaved: false };
     },
+    uploadGuestbookPhoto,
+    publicPhotoUrl,
     getDeviceState: () => rpc("webbing_get_device_state", { p_device_id: getDeviceId() }),
     saveGame: (gameKey, guestIds) => rpc("webbing_save_game", {
       p_device_id: getDeviceId(),
@@ -143,6 +180,11 @@ async function createSupabaseApi() {
     }),
     hostDashboard: (pin) => rpc("webbing_host_dashboard", { p_pin: pin }),
     hostAddGuest: (pin, name) => rpc("webbing_host_add_guest", { p_pin: pin, p_name: name }),
+    hostAddGameGuest: (pin, gameKey, name) => rpc("webbing_host_add_game_guest", {
+      p_pin: pin,
+      p_game_key: gameKey,
+      p_name: name
+    }),
     hostUpdateGuest: (pin, id, name, gameKeys) => rpc("webbing_host_update_guest", {
       p_pin: pin,
       p_guest_id: id,
@@ -172,7 +214,7 @@ function createLocalApi() {
     mode: "local",
     deviceId: getDeviceId(),
 
-    async registerGuests(rawNames, rawMessage) {
+    async registerGuests(rawNames, rawMessage, photoPath = "") {
       const db = readLocalDb();
       if (!db.guestbookOpen) throw new Error("The guestbook is currently closed.");
       const names = [...new Map(rawNames.map(cleanName).filter(Boolean).map((name) => [name.toLowerCase(), name])).values()].slice(0, 10);
@@ -180,6 +222,7 @@ function createLocalApi() {
 
       const deviceId = getDeviceId();
       const message = cleanMessage(rawMessage);
+      const cleanPhotoPath = String(photoPath || "").slice(0, 2500000);
       const entryId = globalThis.crypto?.randomUUID?.() || `entry-${Date.now()}`;
       const now = new Date().toISOString();
       const wanted = new Set(names.map((name) => name.toLowerCase()));
@@ -195,6 +238,7 @@ function createLocalApi() {
             device_id: deviceId,
             guestbook_entry_id: entryId,
             guestbook_message: message,
+            guestbook_photo_path: cleanPhotoPath,
             created_at: now,
             updated_at: now
           };
@@ -203,6 +247,7 @@ function createLocalApi() {
           guest.name = name;
           guest.guestbook_entry_id = entryId;
           guest.guestbook_message = message;
+          guest.guestbook_photo_path = cleanPhotoPath;
           guest.updated_at = now;
         }
         rows.push({ id: guest.id, name: guest.name });
@@ -219,6 +264,7 @@ function createLocalApi() {
         guestbook_open: db.guestbookOpen,
         games_open: db.gamesOpen,
         guestbook_message: latest?.guestbook_message || "",
+        guestbook_photo_path: latest?.guestbook_photo_path || "",
         guests: own.map((guest) => ({
           id: guest.id,
           name: guest.name,
@@ -236,6 +282,20 @@ function createLocalApi() {
       for (const id of guestIds) if (allowed.has(id)) db.signups.push({ guest_id: id, game_key: gameKey, created_at: new Date().toISOString() });
       writeLocalDb(db);
       return { count: guestIds.length };
+    },
+
+    async uploadGuestbookPhoto(file) {
+      if (!(file instanceof Blob)) throw new Error("Choose a photo first.");
+      return await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(String(reader.result || ""));
+        reader.onerror = () => reject(new Error("The photo could not be read."));
+        reader.readAsDataURL(file);
+      });
+    },
+
+    publicPhotoUrl(path) {
+      return String(path || "");
     },
 
     async hostDashboard(pin) {
@@ -263,9 +323,38 @@ function createLocalApi() {
         device_id: `host-${Date.now()}-${Math.random()}`,
         guestbook_entry_id: null,
         guestbook_message: "",
+        guestbook_photo_path: "",
         created_at: now,
         updated_at: now
       });
+      writeLocalDb(db);
+      return true;
+    },
+
+    async hostAddGameGuest(pin, gameKey, rawName) {
+      const db = readLocalDb();
+      if (String(pin) !== String(db.pin)) throw new Error("Invalid host PIN.");
+      if (!VALID_GAMES.includes(gameKey)) throw new Error("Unknown game.");
+      const name = cleanName(rawName);
+      if (!name) throw new Error("Enter a guest name.");
+      let guest = db.guests.find((item) => item.name.toLowerCase() === name.toLowerCase());
+      if (!guest) {
+        const now = new Date().toISOString();
+        guest = {
+          id: globalThis.crypto?.randomUUID?.() || `guest-${Date.now()}`,
+          name,
+          device_id: `host-${Date.now()}-${Math.random()}`,
+          guestbook_entry_id: null,
+          guestbook_message: "",
+          guestbook_photo_path: "",
+          created_at: now,
+          updated_at: now
+        };
+        db.guests.push(guest);
+      }
+      if (!db.signups.some((item) => item.guest_id === guest.id && item.game_key === gameKey)) {
+        db.signups.push({ guest_id: guest.id, game_key: gameKey, created_at: new Date().toISOString() });
+      }
       writeLocalDb(db);
       return true;
     },

@@ -1,6 +1,7 @@
-import { createApi, games, itinerary } from "./shared.js?v=5.0.0";
+import { createApi, games, itinerary, getPartyTime, minutesFrom24h, config } from "./shared.js?v=6.0.0";
 
 const api = await createApi();
+const cfg = config();
 const $ = (selector) => document.querySelector(selector);
 let hostPin = sessionStorage.getItem("webbing_host_pin") || "";
 let data = { guests: [], guestbook_open: true, games_open: true };
@@ -12,7 +13,9 @@ let toastTimer = null;
 if (api.mode === "local") $("#hostPreviewBanner").hidden = false;
 
 function escapeHtml(value) {
-  return String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[char]));
 }
 
 function showToast(message) {
@@ -27,7 +30,13 @@ function formatDate(value) {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return new Intl.DateTimeFormat("en-US", { timeZone: "America/Los_Angeles", month: "long", day: "numeric", hour: "numeric", minute: "2-digit" }).format(date);
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: cfg.timeZone || "America/Los_Angeles",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  }).format(date);
 }
 
 function groupGuestbookEntries(guests) {
@@ -35,14 +44,26 @@ function groupGuestbookEntries(guests) {
   for (const guest of guests) {
     if (!guest.guestbook_entry_id) continue;
     const id = guest.guestbook_entry_id;
-    if (!grouped.has(id)) grouped.set(id, { id, names: [], message: guest.guestbook_message || "", created_at: guest.created_at, updated_at: guest.updated_at || guest.created_at });
+    if (!grouped.has(id)) {
+      grouped.set(id, {
+        id,
+        names: [],
+        message: guest.guestbook_message || "",
+        photoPath: guest.guestbook_photo_path || "",
+        created_at: guest.created_at,
+        updated_at: guest.updated_at || guest.created_at
+      });
+    }
     const entry = grouped.get(id);
     entry.names.push(guest.name);
     if (guest.guestbook_message || !entry.message) entry.message = guest.guestbook_message || "";
+    if (guest.guestbook_photo_path || !entry.photoPath) entry.photoPath = guest.guestbook_photo_path || "";
     if (String(guest.created_at || "") < String(entry.created_at || "")) entry.created_at = guest.created_at;
     if (String(guest.updated_at || "") > String(entry.updated_at || "")) entry.updated_at = guest.updated_at;
   }
-  return [...grouped.values()].map((entry) => ({ ...entry, names: [...new Set(entry.names)] })).sort((a, b) => String(a.created_at || "").localeCompare(String(b.created_at || "")));
+  return [...grouped.values()]
+    .map((entry) => ({ ...entry, names: [...new Set(entry.names)] }))
+    .sort((a, b) => String(a.created_at || "").localeCompare(String(b.created_at || "")));
 }
 
 async function loadDashboard() {
@@ -53,31 +74,63 @@ async function loadDashboard() {
   renderAll();
 }
 
+function getCurrentScheduleState() {
+  const now = getPartyTime();
+  const demo = new URLSearchParams(location.search).get("demo");
+  let currentMinutes = now.minutes;
+  let isEventDay = now.date === (cfg.eventDate || "2026-08-15");
+  if (demo && /^\d{1,2}:\d{2}$/.test(demo)) {
+    currentMinutes = minutesFrom24h(demo.padStart(5, "0"));
+    isEventDay = true;
+  }
+  return { now, currentMinutes, isEventDay };
+}
+
 function renderAll() {
   const guests = data.guests || [];
   bookEntries = groupGuestbookEntries(guests);
-  $("#totalGuests").textContent = guests.length;
-  $("#messageCount").textContent = bookEntries.length;
+  $("#signedInCount").textContent = guests.length;
+  $("#signedInHeadingCount").textContent = guests.length;
+  $("#guestbookEntryCount").textContent = bookEntries.length;
+  $("#totalGameSignups").textContent = guests.reduce((sum, guest) => sum + (guest.games || []).length, 0);
   $("#guestbookOpenToggle").checked = Boolean(data.guestbook_open);
   $("#gamesOpenToggle").checked = Boolean(data.games_open);
   renderItinerary();
-  renderGuestCards();
+  renderGuestNames();
   renderGameLists();
   renderGuestbook();
 }
 
 function renderItinerary() {
-  $("#hostItinerary").innerHTML = itinerary.map((item) => `<div><time>${item.time}</time><span>${escapeHtml(item.title)}</span></div>`).join("");
+  $("#hostItinerary").innerHTML = itinerary.map((item, index) => `
+    <div class="host-itinerary-row" data-index="${index}">
+      <time>${item.time}</time>
+      <span>${escapeHtml(item.title)}</span>
+      <em>Happening now</em>
+    </div>
+  `).join("");
+  updateHostItineraryHighlight();
 }
 
-function renderGuestCards() {
-  const query = $("#guestSearch").value.trim().toLowerCase();
-  const guests = (data.guests || []).filter((guest) => guest.name.toLowerCase().includes(query)).sort((a, b) => a.name.localeCompare(b.name));
-  $("#guestCards").innerHTML = guests.map((guest) => `
-    <article class="host-guest-card" data-id="${guest.id}">
-      <input class="guest-name-input" maxlength="80" value="${escapeHtml(guest.name)}" aria-label="Guest name">
-      <div class="guest-card-actions"><button class="secondary-button save-guest" type="button">Save Name</button><button class="danger-button delete-guest" type="button">Delete</button></div>
-    </article>
+function updateHostItineraryHighlight() {
+  const { now, currentMinutes, isEventDay } = getCurrentScheduleState();
+  $("#hostSummaryTime").textContent = now.label;
+  $("#hostOpenTime").textContent = `Current time: ${now.label}`;
+  const rows = [...document.querySelectorAll(".host-itinerary-row")];
+  rows.forEach((row) => row.classList.remove("active", "past"));
+  if (!isEventDay) return;
+  itinerary.forEach((item, index) => {
+    const start = minutesFrom24h(item.start);
+    const end = minutesFrom24h(item.end);
+    if (currentMinutes >= end) rows[index]?.classList.add("past");
+    if (currentMinutes >= start && currentMinutes < end) rows[index]?.classList.add("active");
+  });
+}
+
+function renderGuestNames() {
+  const guests = (data.guests || []).slice().sort((a, b) => a.name.localeCompare(b.name));
+  $("#guestCards").innerHTML = guests.map((guest, index) => `
+    <div class="host-name-row"><span>${index + 1}</span><strong>${escapeHtml(guest.name)}</strong></div>
   `).join("");
   $("#emptyGuestList").hidden = guests.length > 0;
 }
@@ -85,13 +138,22 @@ function renderGuestCards() {
 function renderGameLists() {
   const guests = (data.guests || []).slice().sort((a, b) => a.name.localeCompare(b.name));
   $("#hostGameLists").innerHTML = games.map((game) => {
-    const count = guests.filter((guest) => (guest.games || []).includes(game.key)).length;
+    const players = guests.filter((guest) => (guest.games || []).includes(game.key));
     return `
       <details class="host-game-card" data-game="${game.key}">
-        <summary><span>${game.icon} ${escapeHtml(game.title)}</span><strong>${count}</strong></summary>
+        <summary>
+          <span><b aria-hidden="true">${game.icon}</b><span><strong>${escapeHtml(game.title)}</strong><small>${escapeHtml(game.detail)}</small></span></span>
+          <strong class="game-count">${players.length}</strong>
+        </summary>
         <div class="host-game-body">
-          ${guests.length ? guests.map((guest) => `<label><input type="checkbox" value="${guest.id}" ${(guest.games || []).includes(game.key) ? "checked" : ""}><span>${escapeHtml(guest.name)}</span></label>`).join("") : `<p class="empty-state">No guests are signed in yet.</p>`}
-          ${guests.length ? `<button class="primary-button save-game-list" type="button">Save ${escapeHtml(game.title)} List</button>` : ""}
+          <div class="static-player-list">
+            ${players.length ? players.map((guest, index) => `<div><span>${index + 1}</span><strong>${escapeHtml(guest.name)}</strong></div>`).join("") : `<p class="empty-state">No one is signed up yet.</p>`}
+          </div>
+          <button class="round-add-button game-add-toggle" type="button" data-game="${game.key}" aria-label="Add a player to ${escapeHtml(game.title)}">+</button>
+          <form class="compact-add-form game-add-form" data-game="${game.key}" hidden>
+            <label>Add a player manually</label>
+            <div><input type="text" maxlength="80" placeholder="Player name" required><button class="primary-button" type="submit">Save</button></div>
+          </form>
         </div>
       </details>`;
   }).join("");
@@ -99,17 +161,20 @@ function renderGameLists() {
 
 function renderGuestbook() {
   const book = $("#guestbookBook");
-  book.innerHTML = bookEntries.map((entry, index) => `
-    <article class="guestbook-page" data-entry-id="${entry.id}" data-index="${index}">
-      <span class="page-web top-left" aria-hidden="true"></span><span class="page-web bottom-right" aria-hidden="true"></span>
-      <div class="page-ornament">✦ ♡ ✦</div>
-      <p class="guestbook-page-label">Savannah &amp; Xander’s Guestbook</p>
-      <blockquote>${entry.message ? escapeHtml(entry.message) : "We were here to celebrate with you!"}</blockquote>
-      <div class="guestbook-signature">${entry.names.map(escapeHtml).join(" &amp; ")}</div>
-      <time>${escapeHtml(formatDate(entry.created_at))}</time>
-      <button class="edit-book-message secondary-button" type="button">Edit This Message</button>
-    </article>
-  `).join("");
+  book.innerHTML = bookEntries.map((entry, index) => {
+    const photoUrl = entry.photoPath ? api.publicPhotoUrl(entry.photoPath) : "";
+    return `
+      <article class="guestbook-page" data-entry-id="${entry.id}" data-index="${index}">
+        <span class="page-web top-left" aria-hidden="true"></span><span class="page-web bottom-right" aria-hidden="true"></span>
+        <div class="page-ornament">❦ ♡ ❦</div>
+        <p class="guestbook-page-label">Savannah &amp; Xander’s Guestbook</p>
+        ${photoUrl ? `<img class="guestbook-photo" src="${escapeHtml(photoUrl)}" alt="Guestbook photo from ${escapeHtml(entry.names.join(" and "))}">` : ""}
+        <blockquote>${entry.message ? escapeHtml(entry.message) : "Thank you for celebrating with us!"}</blockquote>
+        <div class="guestbook-signature">${entry.names.map(escapeHtml).join(" &amp; ")}</div>
+        <time>${escapeHtml(formatDate(entry.created_at))}</time>
+        <button class="edit-book-message secondary-button" type="button">Edit Message</button>
+      </article>`;
+  }).join("");
   $("#emptyGuestbook").hidden = bookEntries.length > 0;
   if (!bookEntries.length) activeBookIndex = 0;
   else activeBookIndex = Math.min(activeBookIndex, bookEntries.length - 1);
@@ -132,8 +197,14 @@ function scrollBookTo(index, smooth = true) {
 }
 
 function downloadCsv() {
-  const header = ["Guest Name", "Guestbook Message", "Checked In", ...games.map((game) => game.title)];
-  const rows = (data.guests || []).slice().sort((a, b) => a.name.localeCompare(b.name)).map((guest) => [guest.name, guest.guestbook_message || "", guest.created_at || "", ...games.map((game) => (guest.games || []).includes(game.key) ? "Yes" : "")]);
+  const header = ["Guest Name", "Guestbook Message", "Photo", "Checked In", ...games.map((game) => game.title)];
+  const rows = (data.guests || []).slice().sort((a, b) => a.name.localeCompare(b.name)).map((guest) => [
+    guest.name,
+    guest.guestbook_message || "",
+    guest.guestbook_photo_path ? api.publicPhotoUrl(guest.guestbook_photo_path) : "",
+    guest.created_at || "",
+    ...games.map((game) => (guest.games || []).includes(game.key) ? "Yes" : "")
+  ]);
   const csv = [header, ...rows].map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
   const link = document.createElement("a");
@@ -151,6 +222,13 @@ function printMode(className) {
   setTimeout(cleanup, 1500);
 }
 
+function toggleCompactForm(id) {
+  const form = document.getElementById(id);
+  if (!form) return;
+  form.hidden = !form.hidden;
+  if (!form.hidden) setTimeout(() => form.querySelector("input")?.focus(), 50);
+}
+
 $("#pinForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   hostPin = $("#hostPin").value.trim();
@@ -164,68 +242,78 @@ $("#refreshButton").addEventListener("click", async () => {
   catch (error) { showToast(error.message); }
 });
 
-$("#guestSearch").addEventListener("input", renderGuestCards);
+document.addEventListener("click", (event) => {
+  const toggle = event.target.closest("[data-toggle-form]");
+  if (toggle) toggleCompactForm(toggle.dataset.toggleForm);
+
+  const gameToggle = event.target.closest(".game-add-toggle[data-game]");
+  if (gameToggle) {
+    const card = gameToggle.closest(".host-game-card");
+    const form = card?.querySelector(".game-add-form");
+    if (form) {
+      form.hidden = !form.hidden;
+      if (!form.hidden) setTimeout(() => form.querySelector("input")?.focus(), 50);
+    }
+  }
+});
 
 $("#hostAddGuestForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const input = $("#hostAddGuestName");
-  try { await api.hostAddGuest(hostPin, input.value); input.value = ""; await loadDashboard(); showToast("Guest added."); }
-  catch (error) { showToast(error.message); }
-});
-
-$("#guestCards").addEventListener("click", async (event) => {
-  const card = event.target.closest(".host-guest-card[data-id]");
-  if (!card) return;
-  const id = card.dataset.id;
-  const guest = (data.guests || []).find((item) => item.id === id);
-  if (!guest) return;
-  if (event.target.closest(".save-guest")) {
-    try { await api.hostUpdateGuest(hostPin, id, card.querySelector("input").value, guest.games || []); await loadDashboard(); showToast("Name saved."); }
-    catch (error) { showToast(error.message); }
-  }
-  if (event.target.closest(".delete-guest")) {
-    if (!confirm(`Delete ${guest.name} from attendance and every game list?`)) return;
-    try { await api.hostDeleteGuest(hostPin, id); await loadDashboard(); showToast("Guest deleted."); }
-    catch (error) { showToast(error.message); }
-  }
-});
-
-$("#hostGameLists").addEventListener("click", async (event) => {
-  const card = event.target.closest(".host-game-card[data-game]");
-  if (!card || !event.target.closest(".save-game-list")) return;
-  const gameKey = card.dataset.game;
-  const selected = new Set([...card.querySelectorAll("input:checked")].map((input) => input.value));
   try {
-    for (const guest of data.guests || []) {
-      const current = new Set(guest.games || []);
-      if (selected.has(guest.id)) current.add(gameKey); else current.delete(gameKey);
-      await api.hostUpdateGuest(hostPin, guest.id, guest.name, [...current]);
-    }
+    await api.hostAddGuest(hostPin, input.value);
+    input.value = "";
+    event.target.hidden = true;
     await loadDashboard();
-    showToast("Game list saved.");
+    showToast("Guest added.");
   } catch (error) { showToast(error.message); }
+});
+
+$("#hostGameLists").addEventListener("submit", async (event) => {
+  const form = event.target.closest(".game-add-form[data-game]");
+  if (!form) return;
+  event.preventDefault();
+  const input = form.querySelector("input");
+  const button = form.querySelector("button");
+  button.disabled = true;
+  try {
+    await api.hostAddGameGuest(hostPin, form.dataset.game, input.value);
+    input.value = "";
+    form.hidden = true;
+    await loadDashboard();
+    showToast("Player added to the game.");
+  } catch (error) { showToast(error.message); }
+  finally { button.disabled = false; }
 });
 
 $("#copyNamesButton").addEventListener("click", async () => {
   const names = (data.guests || []).map((guest) => guest.name).sort((a, b) => a.localeCompare(b)).join("\n");
   try { await navigator.clipboard.writeText(names); showToast("All names copied."); }
-  catch { showToast("Copy was blocked. Use Download CSV instead."); }
+  catch { showToast("Copy was blocked. Use Download instead."); }
 });
 $("#downloadCsvButton").addEventListener("click", downloadCsv);
 $("#printListButton").addEventListener("click", () => printMode("print-signed-names"));
 $("#printGuestbookButton").addEventListener("click", () => printMode("print-guestbook"));
 
 $("#saveSettingsButton").addEventListener("click", async () => {
-  try { await api.hostSetOpen(hostPin, $("#guestbookOpenToggle").checked, $("#gamesOpenToggle").checked); await loadDashboard(); showToast("Access settings saved."); }
-  catch (error) { showToast(error.message); }
+  try {
+    await api.hostSetOpen(hostPin, $("#guestbookOpenToggle").checked, $("#gamesOpenToggle").checked);
+    await loadDashboard();
+    showToast("Access settings saved.");
+  } catch (error) { showToast(error.message); }
 });
 
 $("#changePinForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   const oldPin = $("#oldPin").value.trim();
   const newPin = $("#newPin").value.trim();
-  try { await api.hostChangePin(oldPin, newPin); hostPin = newPin; sessionStorage.setItem("webbing_host_pin", newPin); event.target.reset(); showToast("Host PIN changed."); }
-  catch (error) { showToast(error.message); }
+  try {
+    await api.hostChangePin(oldPin, newPin);
+    hostPin = newPin;
+    sessionStorage.setItem("webbing_host_pin", newPin);
+    event.target.reset();
+    showToast("Host PIN changed.");
+  } catch (error) { showToast(error.message); }
 });
 
 $("#previousPageButton").addEventListener("click", () => scrollBookTo(Math.max(0, activeBookIndex - 1)));
@@ -233,8 +321,12 @@ $("#nextPageButton").addEventListener("click", () => scrollBookTo(Math.min(bookE
 $("#guestbookBook").addEventListener("scroll", () => {
   const book = $("#guestbookBook");
   if (!bookEntries.length) return;
-  const index = Math.round(book.scrollLeft / Math.max(1, book.clientWidth));
-  if (index !== activeBookIndex && index >= 0 && index < bookEntries.length) { activeBookIndex = index; updateBookCounter(); }
+  const pageWidth = book.querySelector(".guestbook-page")?.getBoundingClientRect().width || book.clientWidth;
+  const index = Math.round(book.scrollLeft / Math.max(1, pageWidth + 16));
+  if (index !== activeBookIndex && index >= 0 && index < bookEntries.length) {
+    activeBookIndex = index;
+    updateBookCounter();
+  }
 }, { passive: true });
 
 $("#guestbookBook").addEventListener("click", (event) => {
@@ -251,11 +343,17 @@ $("#guestbookBook").addEventListener("click", (event) => {
 $("#editMessageForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!editingEntry) return;
-  try { await api.hostUpdateMessage(hostPin, editingEntry.id, $("#editMessageText").value); $("#editMessageDialog").close(); await loadDashboard(); showToast("Guestbook message saved."); }
-  catch (error) { $("#editMessageError").textContent = error.message; }
+  try {
+    await api.hostUpdateMessage(hostPin, editingEntry.id, $("#editMessageText").value);
+    $("#editMessageDialog").close();
+    await loadDashboard();
+    showToast("Guestbook message saved.");
+  } catch (error) { $("#editMessageError").textContent = error.message; }
 });
 
 document.querySelectorAll("[data-close-dialog]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
+
+setInterval(updateHostItineraryHighlight, 30000);
 
 if (hostPin) {
   try { await loadDashboard(); }

@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Great+Vibes&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=5.0.0">
+  <link rel="stylesheet" href="./styles.css?v=6.0.0">
 </head>
 <body class="guest-page">
   <div class="ornate-border" aria-hidden="true"><span class="web-corner web-tl"></span><span class="web-corner web-tr"></span><span class="web-corner web-bl"></span><span class="web-corner web-br"></span></div>
@@ -31,7 +31,7 @@
         <g fill="none" stroke="#111014" stroke-width="7" stroke-linecap="round"><path d="M58 90 25 70M55 105 18 106M61 119 30 145M122 90 155 70M125 105 162 106M119 119 150 145"/></g>
         <circle cx="90" cy="96" r="48" fill="url(#maleFur)"/><circle cx="73" cy="84" r="13" fill="#fff"/><circle cx="107" cy="84" r="13" fill="#fff"/><circle cx="76" cy="87" r="7"/><circle cx="110" cy="87" r="7"/><circle cx="79" cy="83" r="2.8" fill="#fff"/><circle cx="113" cy="83" r="2.8" fill="#fff"/><path d="M77 112 Q90 124 103 112" fill="none" stroke="#d99499" stroke-width="4" stroke-linecap="round"/><g transform="translate(90 139)"><path d="M-8 0c-19-17-41-16-39 6 2 22 24 19 41 7z" fill="url(#greenTie)"/><path d="M8 0c19-17 41-16 39 6-2 22-24 19-41 7z" fill="url(#greenTie)"/><rect x="-10" y="-6" width="20" height="21" rx="6" fill="#b88938"/></g>
       </svg>
-      <div class="gold-flourish" aria-hidden="true">✦ ♡ ✦</div>
+      <div class="gold-flourish" aria-hidden="true">❦ ♡ ❦</div>
       <h1 id="pageTitle"><span>Savannah &amp;</span><strong>Xander’s</strong><em>Engagement Party</em></h1>
       <div class="event-details">
         <p>Saturday, August 15, 2026</p>
@@ -73,34 +73,48 @@
   </main>
 
   <dialog id="guestbookDialog" class="modal-dialog">
-    <form id="guestbookForm" class="modal-card" novalidate>
-      <button class="modal-close" type="button" data-close-dialog aria-label="Close guestbook">×</button>
-      <p class="eyebrow">Welcome!</p>
-      <h2>Sign the Guestbook</h2>
-      <p class="modal-intro">Enter each person separately. You may add up to ten names from this phone.</p>
-      <p id="guestbookFormError" class="form-error" aria-live="assertive" hidden></p>
-      <div id="guestNameFields" class="name-fields"></div>
-      <button id="addGuestFieldButton" class="text-button" type="button">+ Add another name</button>
-      <label class="message-label" for="guestbookMessage">Leave Savannah &amp; Xander a message <span>(optional)</span></label>
-      <textarea id="guestbookMessage" maxlength="1000" rows="3" placeholder="Share a wish, a memory, or a note for their keepsake guestbook."></textarea>
-      <div class="character-count"><span id="messageCharacterCount">0</span>/1000</div>
-      <div class="form-submit"><button class="primary-button" id="submitGuestbookButton" type="submit">Check Everyone In</button></div>
+    <form id="guestbookForm" class="modal-card modal-card-fixed" novalidate>
+      <div class="modal-scroll">
+        <button class="modal-close" type="button" data-close-dialog aria-label="Close guestbook">×</button>
+        <p class="eyebrow">Welcome!</p>
+        <h2>Sign the Guestbook</h2>
+        <p class="modal-intro">Enter each person separately. You may add up to ten names from this phone.</p>
+        <p id="guestbookFormError" class="form-error" aria-live="assertive" hidden></p>
+        <div id="guestNameFields" class="name-fields"></div>
+        <button id="addGuestFieldButton" class="text-button" type="button">+ Add another name</button>
+        <label class="message-label" for="guestbookMessage">Leave Savannah &amp; Xander a message <span>(optional)</span></label>
+        <textarea id="guestbookMessage" maxlength="1000" rows="3" placeholder="Share a wish, a memory, or a note for their keepsake guestbook."></textarea>
+        <div class="character-count"><span id="messageCharacterCount">0</span>/1000</div>
+
+        <div class="photo-uploader">
+          <input id="guestPhotoInput" type="file" accept="image/*" hidden>
+          <button id="addPhotoButton" class="photo-button" type="button"><span aria-hidden="true">📷</span><span>Add a Photo</span></button>
+          <p>Take a picture or choose one from your photo gallery. Optional.</p>
+          <div id="photoPreviewWrap" class="photo-preview-wrap" hidden>
+            <img id="photoPreview" alt="Selected guestbook photo preview">
+            <button id="removePhotoButton" class="remove-photo-button" type="button">Remove photo</button>
+          </div>
+        </div>
+      </div>
+      <div class="form-submit fixed-submit"><button class="primary-button" id="submitGuestbookButton" type="submit">Check Everyone In</button></div>
     </form>
   </dialog>
 
   <dialog id="gameDialog" class="modal-dialog">
-    <form id="gameForm" class="modal-card" novalidate>
-      <button class="modal-close" type="button" data-close-dialog aria-label="Close game signup">×</button>
-      <p class="eyebrow">Game signup</p>
-      <h2 id="gameDialogTitle">Choose Players</h2>
-      <p>Select everyone from this phone who wants to play.</p>
-      <div id="gameGuestChoices" class="choice-list"></div>
-      <div id="noDeviceGuests" class="empty-state" hidden>
-        <p>Please sign the guestbook first so the players’ names are available.</p>
-        <button id="openGuestbookFromGame" class="secondary-button" type="button">Sign the Guestbook</button>
+    <form id="gameForm" class="modal-card modal-card-fixed" novalidate>
+      <div class="modal-scroll">
+        <button class="modal-close" type="button" data-close-dialog aria-label="Close game signup">×</button>
+        <p class="eyebrow">Game signup</p>
+        <h2 id="gameDialogTitle">Choose Players</h2>
+        <p>Select everyone from this phone who wants to play.</p>
+        <div id="gameGuestChoices" class="choice-list"></div>
+        <div id="noDeviceGuests" class="empty-state" hidden>
+          <p>Please sign the guestbook first so the players’ names are available.</p>
+          <button id="openGuestbookFromGame" class="secondary-button" type="button">Sign the Guestbook</button>
+        </div>
+        <p id="gameFormError" class="form-error" aria-live="polite"></p>
       </div>
-      <p id="gameFormError" class="form-error" aria-live="polite"></p>
-      <div class="form-submit" id="gameSubmitBar"><button class="primary-button" id="saveGameButton" type="submit">Save Players</button></div>
+      <div class="form-submit fixed-submit" id="gameSubmitBar"><button class="primary-button" id="saveGameButton" type="submit">Save Players</button></div>
     </form>
   </dialog>
 
@@ -114,7 +128,7 @@
       caches.keys().then((keys) => Promise.all(keys.filter((key) => key.startsWith("webbing-party-")).map((key) => caches.delete(key)))).catch(() => {});
     }
   </script>
-  <script src="./supabase-config.js?v=5.0.0"></script>
-  <script type="module" src="./join.js?v=5.0.0"></script>
+  <script src="./supabase-config.js?v=6.0.0"></script>
+  <script type="module" src="./join.js?v=6.0.0"></script>
 </body>
 </html>

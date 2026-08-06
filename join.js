@@ -1,19 +1,24 @@
-import { createApi, games, itinerary, getPartyTime, minutesFrom24h, config } from "./shared.js?v=5.0.0";
+import { createApi, games, itinerary, getPartyTime, minutesFrom24h, config } from "./shared.js?v=6.0.0";
 
 const api = await createApi();
 const cfg = config();
 const $ = (selector) => document.querySelector(selector);
-let deviceState = { guestbook_open: true, games_open: true, guestbook_message: "", guests: [] };
+let deviceState = { guestbook_open: true, games_open: true, guestbook_message: "", guestbook_photo_path: "", guests: [] };
 let activeGame = null;
 let toastTimer = null;
-let connectionOkay = true;
+let selectedPhotoBlob = null;
+let selectedPhotoUrl = "";
+let existingPhotoPath = "";
+let removeExistingPhoto = false;
 
 const guestbookDialog = $("#guestbookDialog");
 const gameDialog = $("#gameDialog");
 if (api.mode === "local") $("#previewBanner").hidden = false;
 
 function escapeHtml(value) {
-  return String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[char]));
 }
 
 function showToast(message) {
@@ -25,7 +30,6 @@ function showToast(message) {
 }
 
 function showConnectionError(error) {
-  connectionOkay = false;
   const box = $("#connectionError");
   box.hidden = false;
   box.textContent = `The live guest list is not connected: ${error.message || error}`;
@@ -105,6 +109,65 @@ function addNameField(value = "") {
   container.appendChild(row);
 }
 
+function clearPreviewObjectUrl() {
+  if (selectedPhotoUrl?.startsWith("blob:")) URL.revokeObjectURL(selectedPhotoUrl);
+  selectedPhotoUrl = "";
+}
+
+function showPhotoPreview(source) {
+  const wrap = $("#photoPreviewWrap");
+  const image = $("#photoPreview");
+  if (!source) {
+    wrap.hidden = true;
+    image.removeAttribute("src");
+    $("#addPhotoButton span:last-child").textContent = "Add a Photo";
+    return;
+  }
+  image.src = source;
+  wrap.hidden = false;
+  $("#addPhotoButton span:last-child").textContent = "Choose a Different Photo";
+}
+
+async function imageToCompressedBlob(file) {
+  if (!file.type.startsWith("image/")) throw new Error("Please choose an image file.");
+  if (file.size > 25 * 1024 * 1024) throw new Error("That photo is too large. Please choose a smaller photo.");
+
+  let bitmap;
+  try {
+    bitmap = await createImageBitmap(file, { imageOrientation: "from-image" });
+  } catch {
+    const url = URL.createObjectURL(file);
+    bitmap = await new Promise((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("That photo could not be opened."));
+      image.src = url;
+    }).finally(() => URL.revokeObjectURL(url));
+  }
+
+  const maxSide = 1600;
+  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
+  const width = Math.max(1, Math.round(bitmap.width * scale));
+  const height = Math.max(1, Math.round(bitmap.height * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const context = canvas.getContext("2d", { alpha: false });
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, width, height);
+  context.drawImage(bitmap, 0, 0, width, height);
+  bitmap.close?.();
+
+  let quality = 0.84;
+  let blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+  while (blob && blob.size > 4.5 * 1024 * 1024 && quality > 0.55) {
+    quality -= 0.1;
+    blob = await new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", quality));
+  }
+  if (!blob) throw new Error("That photo could not be prepared for upload.");
+  return blob;
+}
+
 function openGuestbook() {
   const errorLine = $("#guestbookFormError");
   errorLine.textContent = "";
@@ -117,15 +180,20 @@ function openGuestbook() {
   $("#guestbookMessage").value = deviceState.guestbook_message || "";
   $("#messageCharacterCount").textContent = $("#guestbookMessage").value.length;
   $("#submitGuestbookButton").textContent = existing.length ? "Update Check-In" : "Check Everyone In";
+
+  clearPreviewObjectUrl();
+  selectedPhotoBlob = null;
+  removeExistingPhoto = false;
+  existingPhotoPath = deviceState.guestbook_photo_path || "";
+  showPhotoPreview(existingPhotoPath ? api.publicPhotoUrl(existingPhotoPath) : "");
+  $("#guestPhotoInput").value = "";
+
   guestbookDialog.showModal();
-  const card = guestbookDialog.querySelector(".modal-card");
-  card?.scrollTo({ top: 0, behavior: "auto" });
-  setTimeout(() => fields.querySelector("input")?.focus(), 100);
+  $("#guestbookDialog .modal-scroll")?.scrollTo({ top: 0, behavior: "auto" });
 }
 
 async function refreshDeviceState() {
   deviceState = await api.getDeviceState();
-  connectionOkay = true;
   $("#connectionError").hidden = true;
   const count = deviceState.guests?.length || 0;
   const button = $("#openGuestbookButton");
@@ -142,7 +210,7 @@ function openGame(gameKey) {
   activeGame = games.find((game) => game.key === gameKey);
   if (!activeGame) return;
   $("#gameFormError").textContent = "";
-  $("#gameDialogTitle").textContent = activeGame.title;
+  $("#gameDialogTitle").textContent = `${activeGame.title} • ${activeGame.detail.split("•")[0].trim()}`;
   const choices = $("#gameGuestChoices");
   choices.innerHTML = "";
   const guests = deviceState.guests || [];
@@ -163,6 +231,36 @@ $("#addGuestFieldButton").addEventListener("click", () => {
   $("#guestNameFields").lastElementChild.querySelector("input").focus();
 });
 $("#guestbookMessage").addEventListener("input", (event) => $("#messageCharacterCount").textContent = event.target.value.length);
+$("#addPhotoButton").addEventListener("click", () => $("#guestPhotoInput").click());
+$("#guestPhotoInput").addEventListener("change", async (event) => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  const errorLine = $("#guestbookFormError");
+  errorLine.hidden = true;
+  try {
+    $("#addPhotoButton").disabled = true;
+    $("#addPhotoButton span:last-child").textContent = "Preparing Photo…";
+    selectedPhotoBlob = await imageToCompressedBlob(file);
+    removeExistingPhoto = false;
+    clearPreviewObjectUrl();
+    selectedPhotoUrl = URL.createObjectURL(selectedPhotoBlob);
+    showPhotoPreview(selectedPhotoUrl);
+  } catch (error) {
+    selectedPhotoBlob = null;
+    errorLine.textContent = error.message || "The photo could not be prepared.";
+    errorLine.hidden = false;
+  } finally {
+    $("#addPhotoButton").disabled = false;
+  }
+});
+$("#removePhotoButton").addEventListener("click", () => {
+  clearPreviewObjectUrl();
+  selectedPhotoBlob = null;
+  existingPhotoPath = "";
+  removeExistingPhoto = true;
+  $("#guestPhotoInput").value = "";
+  showPhotoPreview("");
+});
 $("#gameList").addEventListener("click", (event) => {
   const button = event.target.closest("[data-game]");
   if (button) openGame(button.dataset.game);
@@ -181,33 +279,36 @@ $("#guestbookForm").addEventListener("submit", async (event) => {
   if (!names.length) {
     errorLine.textContent = "Please enter at least one guest name.";
     errorLine.hidden = false;
-    guestbookDialog.querySelector(".modal-card")?.scrollTo({ top: 0, behavior: "smooth" });
+    $("#guestbookDialog .modal-scroll")?.scrollTo({ top: 0, behavior: "smooth" });
     return $("#guestNameFields input")?.focus();
   }
+
   const button = $("#submitGuestbookButton");
   button.disabled = true;
-  button.textContent = "Checking everyone in…";
   try {
-    const result = await api.registerGuests(names, message);
+    let photoPath = removeExistingPhoto ? "" : existingPhotoPath;
+    if (selectedPhotoBlob) {
+      button.textContent = "Adding Photo…";
+      photoPath = await api.uploadGuestbookPhoto(selectedPhotoBlob);
+    }
+    button.textContent = "Checking Everyone In…";
+    const result = await api.registerGuests(names, message, photoPath);
     const rows = Array.isArray(result) ? result : (result?.rows || []);
     await refreshDeviceState();
     document.activeElement?.blur?.();
+    clearPreviewObjectUrl();
     guestbookDialog.close();
-    $("#guestbookForm").reset();
-    $("#messageCharacterCount").textContent = "0";
     const count = rows.length || names.length;
-    showToast(result?.messageSaved === false
-      ? `${count} ${count === 1 ? "person is" : "people are"} checked in. Run the V5 repair SQL to enable keepsake messages.`
-      : `${count} ${count === 1 ? "person is" : "people are"} checked in.`);
+    showToast(`${count} ${count === 1 ? "person is" : "people are"} checked in.`);
   } catch (error) {
     const rawMessage = error?.message || "The names could not be saved.";
-    const needsUpgrade = /webbing_register_guests|p_message|schema cache|could not find the function/i.test(rawMessage);
+    const needsUpgrade = /webbing_check_in_v6|p_photo_path|schema cache|could not find the function/i.test(rawMessage);
     errorLine.textContent = needsUpgrade
-      ? "The guest list is connected, but it still needs the short Version 5 Supabase repair SQL. Run that repair once, refresh this page, and try again."
+      ? "The website files are updated, but Supabase still needs the Version 6 upgrade SQL. Run that file once, refresh this page, and try again."
       : `Check-in was not saved: ${rawMessage}`;
     errorLine.hidden = false;
-    guestbookDialog.querySelector(".modal-card")?.scrollTo({ top: 0, behavior: "smooth" });
-    showToast("Check-in was not saved. The exact error is shown at the top of the guestbook.");
+    $("#guestbookDialog .modal-scroll")?.scrollTo({ top: 0, behavior: "smooth" });
+    showToast("Check-in was not saved. The exact error is shown inside the guestbook.");
   } finally {
     button.disabled = false;
     button.textContent = deviceState.guests?.length ? "Update Check-In" : "Check Everyone In";
@@ -249,4 +350,3 @@ renderGames();
 try { await refreshDeviceState(); }
 catch (error) { showConnectionError(error); }
 setInterval(updateItineraryHighlight, 30000);
-

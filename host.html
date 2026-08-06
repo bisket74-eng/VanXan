@@ -13,13 +13,18 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Great+Vibes&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=5.0.0">
+  <link rel="stylesheet" href="./styles.css?v=6.0.0">
 </head>
 <body class="host-page">
   <div class="ornate-border" aria-hidden="true"><span class="web-corner web-tl"></span><span class="web-corner web-tr"></span><span class="web-corner web-bl"></span><span class="web-corner web-br"></span></div>
+
   <main class="host-shell">
-    <header class="host-header">
-      <div><p class="eyebrow">Private host page</p><h1>Party Control Panel</h1><p>Open only the section you need.</p></div>
+    <header class="host-header host-header-compact">
+      <div>
+        <p class="eyebrow">Private host page</p>
+        <h1>Party Control Panel</h1>
+        <p>Open only the section you need.</p>
+      </div>
       <svg class="host-spider" viewBox="0 0 180 180" aria-hidden="true"><g fill="none" stroke="#111014" stroke-width="7" stroke-linecap="round"><path d="M58 90 25 70M55 105 18 106M61 119 30 145M122 90 155 70M125 105 162 106M119 119 150 145"/></g><circle cx="90" cy="96" r="48" fill="#151318"/><circle cx="73" cy="84" r="13" fill="#fff"/><circle cx="107" cy="84" r="13" fill="#fff"/><circle cx="76" cy="87" r="7"/><circle cx="110" cy="87" r="7"/><path d="M77 112 Q90 124 103 112" fill="none" stroke="#d99499" stroke-width="4"/><g transform="translate(90 139)" fill="#286044"><path d="M-8 0c-19-17-41-16-39 6 2 22 24 19 41 7z"/><path d="M8 0c19-17 41-16 39 6-2 22-24 19-41 7z"/><rect x="-10" y="-6" width="20" height="21" rx="6" fill="#b88938"/></g></svg>
     </header>
 
@@ -36,43 +41,58 @@
     </section>
 
     <div id="dashboard" hidden>
-      <div class="host-summary">
-        <span><strong id="totalGuests">0</strong> signed in</span>
-        <span><strong id="messageCount">0</strong> guestbook entries</span>
-      </div>
-
-      <div class="host-sections">
+      <div class="host-sections simple-host-sections">
         <details class="host-section" id="itinerarySection">
-          <summary><span>Itinerary</span><small>View the party schedule</small></summary>
-          <div class="host-section-body"><div id="hostItinerary" class="host-itinerary"></div></div>
+          <summary>
+            <span class="host-summary-main"><strong>Itinerary</strong><small>Follow the live schedule</small></span>
+            <span id="hostSummaryTime" class="summary-time">Current time</span>
+          </summary>
+          <div class="host-section-body">
+            <div class="host-open-heading"><span>Today’s Itinerary</span><time id="hostOpenTime">Current time</time></div>
+            <div id="hostItinerary" class="host-itinerary live-host-itinerary"></div>
+          </div>
         </details>
 
         <details class="host-section" id="namesSection">
-          <summary><span>Signed-In Names</span><small>Attendance, copy, download, print, edit</small></summary>
+          <summary>
+            <span class="host-summary-main"><strong>Signed-In Names</strong><small>Attendance list for Bingo</small></span>
+            <span id="signedInCount" class="summary-count">0</span>
+          </summary>
           <div class="host-section-body">
-            <div class="action-grid">
-              <button id="refreshButton" class="secondary-button" type="button">Refresh</button>
-              <button id="copyNamesButton" class="secondary-button" type="button">Copy All Names</button>
-              <button id="downloadCsvButton" class="secondary-button" type="button">Download CSV</button>
-              <button id="printListButton" class="secondary-button" type="button">Print List</button>
+            <div class="names-topline">
+              <p><strong id="signedInHeadingCount">0</strong> people signed in</p>
+              <button id="refreshButton" class="small-button" type="button">Refresh</button>
             </div>
-            <form id="hostAddGuestForm" class="inline-add-form">
-              <input id="hostAddGuestName" type="text" maxlength="80" placeholder="Add a guest manually" required>
-              <button class="primary-button" type="submit">Add</button>
-            </form>
-            <input id="guestSearch" class="wide-search" type="search" placeholder="Search signed-in names">
-            <div id="guestCards" class="host-guest-list"></div>
+            <div id="guestCards" class="host-name-scroll"></div>
             <div id="emptyGuestList" class="empty-state" hidden>No guests have checked in yet.</div>
+
+            <button class="round-add-button" type="button" data-toggle-form="hostAddGuestForm" aria-label="Add a signed-in guest">+</button>
+            <form id="hostAddGuestForm" class="compact-add-form" hidden>
+              <label for="hostAddGuestName">Add a signed-in name manually</label>
+              <div><input id="hostAddGuestName" type="text" maxlength="80" placeholder="Guest name" required><button class="primary-button" type="submit">Save</button></div>
+            </form>
+
+            <div class="compact-actions">
+              <button id="copyNamesButton" class="secondary-button" type="button">Copy</button>
+              <button id="downloadCsvButton" class="secondary-button" type="button">Download</button>
+              <button id="printListButton" class="secondary-button" type="button">Print</button>
+            </div>
           </div>
         </details>
 
         <details class="host-section" id="gamesSection">
-          <summary><span>Game Signups</span><small>See and change who is playing</small></summary>
-          <div class="host-section-body"><div id="hostGameLists" class="host-game-lists"></div></div>
+          <summary>
+            <span class="host-summary-main"><strong>Game Signups</strong><small>Open a game to see its players</small></span>
+            <span id="totalGameSignups" class="summary-count">0</span>
+          </summary>
+          <div class="host-section-body"><div id="hostGameLists" class="host-game-lists static-game-lists"></div></div>
         </details>
 
         <details class="host-section guestbook-host-section" id="guestbookSection">
-          <summary><span>Guestbook</span><small>Swipe through their decorated messages</small></summary>
+          <summary>
+            <span class="host-summary-main"><strong>Guestbook</strong><small>Swipe through messages and photos</small></span>
+            <span id="guestbookEntryCount" class="summary-count">0</span>
+          </summary>
           <div class="host-section-body">
             <div class="book-toolbar">
               <button id="previousPageButton" class="book-arrow" type="button" aria-label="Previous guestbook page">‹</button>
@@ -81,12 +101,15 @@
               <button id="printGuestbookButton" class="secondary-button" type="button">Print Guestbook</button>
             </div>
             <div id="guestbookBook" class="guestbook-book" tabindex="0"></div>
-            <div id="emptyGuestbook" class="empty-state" hidden>No guestbook messages have been signed yet.</div>
+            <div id="emptyGuestbook" class="empty-state" hidden>No guestbook pages have been signed yet.</div>
           </div>
         </details>
 
         <details class="host-section" id="controlsSection">
-          <summary><span>Party Controls</span><small>Open/close forms and change the PIN</small></summary>
+          <summary>
+            <span class="host-summary-main"><strong>Party Controls</strong><small>Open or close check-in and change the PIN</small></span>
+            <span class="summary-heart" aria-hidden="true">♡</span>
+          </summary>
           <div class="host-section-body">
             <p class="control-help">These controls only decide whether guests can submit check-ins or game signups.</p>
             <label class="switch-row"><input id="guestbookOpenToggle" type="checkbox"><span>Guestbook check-in open</span></label>
@@ -105,20 +128,21 @@
   </main>
 
   <dialog id="editMessageDialog" class="modal-dialog">
-    <form id="editMessageForm" class="modal-card" novalidate>
-      <button class="modal-close" type="button" data-close-dialog aria-label="Close">×</button>
-      <p class="eyebrow">Guestbook</p>
-      <h2>Edit Message</h2>
-      <p id="editMessageNames"></p>
-      <textarea id="editMessageText" maxlength="1000" rows="7"></textarea>
-      <p id="editMessageError" class="form-error"></p>
-      <div class="form-submit"><button class="primary-button" type="submit">Save Message</button></div>
+    <form id="editMessageForm" class="modal-card modal-card-fixed" novalidate>
+      <div class="modal-scroll">
+        <button class="modal-close" type="button" data-close-dialog aria-label="Close">×</button>
+        <p class="eyebrow">Guestbook</p>
+        <h2>Edit Message</h2>
+        <p id="editMessageNames"></p>
+        <textarea id="editMessageText" maxlength="1000" rows="7"></textarea>
+        <p id="editMessageError" class="form-error"></p>
+      </div>
+      <div class="form-submit fixed-submit"><button class="primary-button" type="submit">Save Message</button></div>
     </form>
   </dialog>
 
   <div id="hostToast" class="toast" role="status" aria-live="polite"></div>
   <script>
-    // This one-time page does not need offline caching. Clear older cached versions.
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.getRegistrations().then((registrations) => registrations.forEach((registration) => registration.unregister())).catch(() => {});
     }
@@ -126,7 +150,7 @@
       caches.keys().then((keys) => Promise.all(keys.filter((key) => key.startsWith("webbing-party-")).map((key) => caches.delete(key)))).catch(() => {});
     }
   </script>
-  <script src="./supabase-config.js?v=5.0.0"></script>
-  <script type="module" src="./host.js?v=5.0.0"></script>
+  <script src="./supabase-config.js?v=6.0.0"></script>
+  <script type="module" src="./host.js?v=6.0.0"></script>
 </body>
 </html>
