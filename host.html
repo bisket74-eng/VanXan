@@ -4,118 +4,129 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#173f2d">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
   <meta name="robots" content="noindex,nofollow">
-  <title>Party Host Dashboard</title>
+  <title>Webbing Party Host</title>
   <link rel="icon" href="./assets/favicon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Great+Vibes&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css?v=4.0.0">
 </head>
 <body class="host-page">
+  <div class="ornate-border" aria-hidden="true"><span class="web-corner web-tl"></span><span class="web-corner web-tr"></span><span class="web-corner web-bl"></span><span class="web-corner web-br"></span></div>
   <main class="host-shell">
     <header class="host-header">
-      <div>
-        <p class="eyebrow">Private page</p>
-        <h1>Party Host Dashboard</h1>
-        <p>Manage the guestbook and game signups.</p>
-      </div>
-      <img src="./assets/spider-male.svg" alt="" class="host-spider" aria-hidden="true">
+      <div><p class="eyebrow">Private host page</p><h1>Party Control Panel</h1><p>Open only the section you need.</p></div>
+      <svg class="host-spider" viewBox="0 0 180 180" aria-hidden="true"><g fill="none" stroke="#111014" stroke-width="7" stroke-linecap="round"><path d="M58 90 25 70M55 105 18 106M61 119 30 145M122 90 155 70M125 105 162 106M119 119 150 145"/></g><circle cx="90" cy="96" r="48" fill="#151318"/><circle cx="73" cy="84" r="13" fill="#fff"/><circle cx="107" cy="84" r="13" fill="#fff"/><circle cx="76" cy="87" r="7"/><circle cx="110" cy="87" r="7"/><path d="M77 112 Q90 124 103 112" fill="none" stroke="#d99499" stroke-width="4"/><g transform="translate(90 139)" fill="#286044"><path d="M-8 0c-19-17-41-16-39 6 2 22 24 19 41 7z"/><path d="M8 0c19-17 41-16 39 6-2 22-24 19-41 7z"/><rect x="-10" y="-6" width="20" height="21" rx="6" fill="#b88938"/></g></svg>
     </header>
 
-    <div id="hostPreviewBanner" class="preview-banner" hidden>
-      Preview mode is on. Data is only stored in this browser until Supabase is connected.
-    </div>
+    <div id="hostPreviewBanner" class="preview-banner" hidden>Preview mode is on. This browser is not sharing names with other phones.</div>
 
     <section id="pinGate" class="panel pin-panel">
       <h2>Enter Host PIN</h2>
-      <p>This page is separate from the guest QR page. No email login is required.</p>
-      <form id="pinForm" class="inline-form">
-        <label class="sr-only" for="hostPin">Host PIN</label>
-        <input id="hostPin" type="password" inputmode="numeric" autocomplete="current-password" maxlength="12" placeholder="Host PIN" required>
-        <button class="primary-button" type="submit">Open Dashboard</button>
+      <p>No email login is required.</p>
+      <form id="pinForm" class="stack-form">
+        <input id="hostPin" type="password" inputmode="numeric" maxlength="12" placeholder="Host PIN" required>
+        <button class="primary-button" type="submit">Open Host Page</button>
       </form>
-      <p id="pinError" class="error-text" aria-live="polite"></p>
+      <p id="pinError" class="form-error" aria-live="polite"></p>
     </section>
 
     <div id="dashboard" hidden>
-      <section class="stats-grid" aria-label="Party totals">
-        <article><strong id="totalGuests">0</strong><span>Checked-in guests</span></article>
-        <article><strong id="saranCount">0</strong><span>Saran Wrap Ball</span></article>
-        <article><strong id="houseCount">0</strong><span>Build Us a House</span></article>
-        <article><strong id="bingoCount">0</strong><span>Bingo</span></article>
-        <article><strong id="pinataCount">0</strong><span>Piñata</span></article>
-      </section>
+      <div class="host-summary">
+        <span><strong id="totalGuests">0</strong> signed in</span>
+        <span><strong id="messageCount">0</strong> guestbook entries</span>
+      </div>
 
-      <section class="panel host-controls">
-        <div class="host-toolbar">
-          <button id="refreshButton" class="secondary-button" type="button">Refresh</button>
-          <button id="copyNamesButton" class="secondary-button" type="button">Copy All Names</button>
-          <button id="downloadCsvButton" class="secondary-button" type="button">Download CSV</button>
-          <button id="printButton" class="secondary-button" type="button">Print List</button>
-        </div>
-        <div class="toggle-row">
-          <label><input id="guestbookOpenToggle" type="checkbox"> Guestbook open</label>
-          <label><input id="gamesOpenToggle" type="checkbox"> Game signups open</label>
-          <button id="saveSettingsButton" class="primary-button small-button" type="button">Save Settings</button>
-        </div>
-      </section>
+      <div class="host-sections">
+        <details class="host-section" id="itinerarySection">
+          <summary><span>Itinerary</span><small>View the party schedule</small></summary>
+          <div class="host-section-body"><div id="hostItinerary" class="host-itinerary"></div></div>
+        </details>
 
-      <section class="panel add-guest-panel">
-        <div class="section-heading compact-heading">
-          <span aria-hidden="true">+</span>
-          <div>
-            <p class="eyebrow">Host entry</p>
-            <h2>Add a Guest</h2>
+        <details class="host-section" id="namesSection">
+          <summary><span>Signed-In Names</span><small>Attendance, copy, download, print, edit</small></summary>
+          <div class="host-section-body">
+            <div class="action-grid">
+              <button id="refreshButton" class="secondary-button" type="button">Refresh</button>
+              <button id="copyNamesButton" class="secondary-button" type="button">Copy All Names</button>
+              <button id="downloadCsvButton" class="secondary-button" type="button">Download CSV</button>
+              <button id="printListButton" class="secondary-button" type="button">Print List</button>
+            </div>
+            <form id="hostAddGuestForm" class="inline-add-form">
+              <input id="hostAddGuestName" type="text" maxlength="80" placeholder="Add a guest manually" required>
+              <button class="primary-button" type="submit">Add</button>
+            </form>
+            <input id="guestSearch" class="wide-search" type="search" placeholder="Search signed-in names">
+            <div id="guestCards" class="host-guest-list"></div>
+            <div id="emptyGuestList" class="empty-state" hidden>No guests have checked in yet.</div>
           </div>
-        </div>
-        <form id="hostAddGuestForm" class="inline-form">
-          <label class="sr-only" for="hostAddGuestName">Guest name</label>
-          <input id="hostAddGuestName" type="text" maxlength="80" placeholder="Guest name" required>
-          <button class="primary-button" type="submit">Add Guest</button>
-        </form>
-      </section>
+        </details>
 
-      <section class="panel guest-manager-panel">
-        <div class="guest-manager-head">
-          <div>
-            <p class="eyebrow">Attendance and games</p>
-            <h2>Guest List</h2>
+        <details class="host-section" id="gamesSection">
+          <summary><span>Game Signups</span><small>See and change who is playing</small></summary>
+          <div class="host-section-body"><div id="hostGameLists" class="host-game-lists"></div></div>
+        </details>
+
+        <details class="host-section guestbook-host-section" id="guestbookSection">
+          <summary><span>Guestbook</span><small>Swipe through their decorated messages</small></summary>
+          <div class="host-section-body">
+            <div class="book-toolbar">
+              <button id="previousPageButton" class="book-arrow" type="button" aria-label="Previous guestbook page">‹</button>
+              <span id="guestbookPageCounter">0 of 0</span>
+              <button id="nextPageButton" class="book-arrow" type="button" aria-label="Next guestbook page">›</button>
+              <button id="printGuestbookButton" class="secondary-button" type="button">Print Guestbook</button>
+            </div>
+            <div id="guestbookBook" class="guestbook-book" tabindex="0"></div>
+            <div id="emptyGuestbook" class="empty-state" hidden>No guestbook messages have been signed yet.</div>
           </div>
-          <input id="guestSearch" type="search" placeholder="Search names" aria-label="Search guest names">
-        </div>
-        <div class="guest-table-wrap">
-          <table class="guest-table">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th title="Saran Wrap Ball">Saran</th>
-                <th title="Build Us a House">House</th>
-                <th>Bingo</th>
-                <th>Piñata</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="guestTableBody"></tbody>
-          </table>
-          <div id="emptyGuestList" class="empty-state" hidden>No guests have checked in yet.</div>
-        </div>
-      </section>
+        </details>
 
-      <section class="panel host-pin-panel">
-        <h2>Change Host PIN</h2>
-        <form id="changePinForm" class="inline-form three-fields">
-          <input id="oldPin" type="password" inputmode="numeric" placeholder="Current PIN" required>
-          <input id="newPin" type="password" inputmode="numeric" minlength="4" maxlength="12" placeholder="New PIN" required>
-          <button class="secondary-button" type="submit">Change PIN</button>
-        </form>
-      </section>
+        <details class="host-section" id="controlsSection">
+          <summary><span>Party Controls</span><small>Open/close forms and change the PIN</small></summary>
+          <div class="host-section-body">
+            <p class="control-help">These controls only decide whether guests can submit check-ins or game signups.</p>
+            <label class="switch-row"><input id="guestbookOpenToggle" type="checkbox"><span>Guestbook check-in open</span></label>
+            <label class="switch-row"><input id="gamesOpenToggle" type="checkbox"><span>Game signups open</span></label>
+            <button id="saveSettingsButton" class="primary-button" type="button">Save Access Settings</button>
+            <hr>
+            <form id="changePinForm" class="stack-form">
+              <input id="oldPin" type="password" inputmode="numeric" placeholder="Current PIN" required>
+              <input id="newPin" type="password" inputmode="numeric" minlength="4" maxlength="12" placeholder="New PIN" required>
+              <button class="secondary-button" type="submit">Change Host PIN</button>
+            </form>
+          </div>
+        </details>
+      </div>
     </div>
   </main>
 
-  <div id="hostToast" class="toast" role="status" aria-live="polite"></div>
+  <dialog id="editMessageDialog" class="modal-dialog">
+    <form id="editMessageForm" class="modal-card" novalidate>
+      <button class="modal-close" type="button" data-close-dialog aria-label="Close">×</button>
+      <p class="eyebrow">Guestbook</p>
+      <h2>Edit Message</h2>
+      <p id="editMessageNames"></p>
+      <textarea id="editMessageText" maxlength="1000" rows="7"></textarea>
+      <p id="editMessageError" class="form-error"></p>
+      <div class="form-submit"><button class="primary-button" type="submit">Save Message</button></div>
+    </form>
+  </dialog>
 
-  <script src="./supabase-config.js"></script>
-  <script type="module" src="./host.js"></script>
+  <div id="hostToast" class="toast" role="status" aria-live="polite"></div>
+  <script>
+    // This one-time page does not need offline caching. Clear older cached versions.
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => registrations.forEach((registration) => registration.unregister())).catch(() => {});
+    }
+    if ("caches" in window) {
+      caches.keys().then((keys) => Promise.all(keys.filter((key) => key.startsWith("webbing-party-")).map((key) => caches.delete(key)))).catch(() => {});
+    }
+  </script>
+  <script src="./supabase-config.js?v=4.0.0"></script>
+  <script type="module" src="./host.js?v=4.0.0"></script>
 </body>
 </html>

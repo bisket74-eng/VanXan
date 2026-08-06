@@ -1,32 +1,42 @@
-import { createApi, games, itinerary, getPartyTime, minutesFrom24h, config } from "./shared.js";
+import { createApi, games, itinerary, getPartyTime, minutesFrom24h, config } from "./shared.js?v=4.0.0";
 
 const api = await createApi();
 const cfg = config();
-let deviceState = { guestbook_open: true, games_open: true, guests: [] };
+const $ = (selector) => document.querySelector(selector);
+let deviceState = { guestbook_open: true, games_open: true, guestbook_message: "", guests: [] };
 let activeGame = null;
 let toastTimer = null;
+let connectionOkay = true;
 
-const $ = (selector) => document.querySelector(selector);
 const guestbookDialog = $("#guestbookDialog");
 const gameDialog = $("#gameDialog");
-
 if (api.mode === "local") $("#previewBanner").hidden = false;
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[char]));
+}
 
 function showToast(message) {
   const toast = $("#toast");
   toast.textContent = message;
   toast.classList.add("show");
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.classList.remove("show"), 2800);
+  toastTimer = setTimeout(() => toast.classList.remove("show"), 3200);
+}
+
+function showConnectionError(error) {
+  connectionOkay = false;
+  const box = $("#connectionError");
+  box.hidden = false;
+  box.textContent = `The live guest list is not connected: ${error.message || error}`;
 }
 
 function renderItinerary() {
-  const list = $("#itineraryList");
-  list.innerHTML = itinerary.map((item, index) => `
+  $("#itineraryList").innerHTML = itinerary.map((item, index) => `
     <article class="itinerary-item" data-index="${index}">
-      <time class="itinerary-time">${item.time}</time>
-      <div class="itinerary-title">${item.title}</div>
-      <span class="itinerary-badge">Happening now</span>
+      <time>${item.time}</time>
+      <div>${escapeHtml(item.title)}</div>
+      <span>Happening now</span>
     </article>
   `).join("");
   updateItineraryHighlight();
@@ -36,9 +46,8 @@ function updateItineraryHighlight() {
   const now = getPartyTime();
   $("#currentTimeLabel").textContent = `Current time: ${now.label}`;
   const demo = new URLSearchParams(location.search).get("demo");
-  const eventDate = cfg.eventDate || "2026-08-15";
   let currentMinutes = now.minutes;
-  let isEventDay = now.date === eventDate;
+  let isEventDay = now.date === (cfg.eventDate || "2026-08-15");
   if (demo && /^\d{1,2}:\d{2}$/.test(demo)) {
     currentMinutes = minutesFrom24h(demo.padStart(5, "0"));
     isEventDay = true;
@@ -58,7 +67,7 @@ function renderGames() {
   $("#gameList").innerHTML = games.map((game) => `
     <button class="game-row" type="button" data-game="${game.key}">
       <span class="game-icon" aria-hidden="true">${game.icon}</span>
-      <span><strong>${game.title}</strong><small>${game.detail}</small></span>
+      <span><strong>${escapeHtml(game.title)}</strong><small>${escapeHtml(game.detail)}</small></span>
       <span class="game-arrow" aria-hidden="true">›</span>
     </button>
   `).join("");
@@ -66,102 +75,137 @@ function renderGames() {
 
 function addNameField(value = "") {
   const container = $("#guestNameFields");
-  if (container.children.length >= 10) {
-    showToast("You can enter up to ten names at once.");
-    return;
-  }
+  if (container.children.length >= 10) return showToast("You can enter up to ten names at once.");
   const row = document.createElement("div");
   row.className = "name-row";
   row.innerHTML = `
     <label class="sr-only">Guest name</label>
-    <input type="text" maxlength="80" autocomplete="name" placeholder="Guest name" value="${escapeHtml(value)}" required>
+    <input type="text" maxlength="80" autocomplete="name" enterkeyhint="next" placeholder="Guest name" value="${escapeHtml(value)}">
     <button class="remove-name-button" type="button" aria-label="Remove this name">×</button>
   `;
-  row.querySelector(".remove-name-button").addEventListener("click", () => {
-    if (container.children.length === 1) row.querySelector("input").value = "";
+  const input = row.querySelector("input");
+  row.querySelector("button").addEventListener("click", () => {
+    if (container.children.length === 1) input.value = "";
     else row.remove();
+  });
+  input.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    if (!input.value.trim()) return;
+    const rows = [...container.querySelectorAll("input")];
+    const index = rows.indexOf(input);
+    if (index < rows.length - 1) rows[index + 1].focus();
+    else if (rows.length < 10) {
+      addNameField();
+      container.lastElementChild.querySelector("input").focus();
+    } else {
+      $("#submitGuestbookButton").focus();
+    }
   });
   container.appendChild(row);
 }
 
 function openGuestbook() {
+  $("#guestbookFormError").textContent = "";
   const fields = $("#guestNameFields");
   fields.innerHTML = "";
-  addNameField();
+  const existing = deviceState.guests || [];
+  if (existing.length) existing.forEach((guest) => addNameField(guest.name));
+  else addNameField();
+  $("#guestbookMessage").value = deviceState.guestbook_message || "";
+  $("#messageCharacterCount").textContent = $("#guestbookMessage").value.length;
+  $("#submitGuestbookButton").textContent = existing.length ? "Update Check-In" : "Check Everyone In";
   guestbookDialog.showModal();
-  setTimeout(() => fields.querySelector("input")?.focus(), 60);
+  setTimeout(() => fields.querySelector("input")?.focus(), 80);
 }
 
 async function refreshDeviceState() {
   deviceState = await api.getDeviceState();
+  connectionOkay = true;
+  $("#connectionError").hidden = true;
   const count = deviceState.guests?.length || 0;
-  $("#guestbookStatus").textContent = count ? `${count} ${count === 1 ? "guest is" : "guests are"} checked in from this phone.` : "";
+  const button = $("#openGuestbookButton");
+  button.disabled = !deviceState.guestbook_open;
+  button.textContent = deviceState.guestbook_open ? (count ? "Update My Check-In" : "Sign the Guestbook") : "Guestbook Closed";
+  if (!deviceState.guestbook_open) $("#guestbookStatus").textContent = "Guest check-in is currently closed.";
+  else if (count) $("#guestbookStatus").textContent = `${count} ${count === 1 ? "person is" : "people are"} checked in from this phone.`;
+  else $("#guestbookStatus").textContent = "";
+  document.querySelectorAll(".game-row").forEach((row) => row.disabled = !deviceState.games_open);
 }
 
 function openGame(gameKey) {
+  if (!deviceState.games_open) return showToast("Game signups are currently closed.");
   activeGame = games.find((game) => game.key === gameKey);
   if (!activeGame) return;
+  $("#gameFormError").textContent = "";
   $("#gameDialogTitle").textContent = activeGame.title;
-  $("#gameDialogCopy").textContent = "Select everyone from this phone who wants to play.";
   const choices = $("#gameGuestChoices");
   choices.innerHTML = "";
   const guests = deviceState.guests || [];
   $("#noDeviceGuests").hidden = guests.length > 0;
-  $("#gameModalActions").hidden = guests.length === 0;
-  for (const guest of guests) {
+  $("#gameSubmitBar").hidden = guests.length === 0;
+  guests.forEach((guest) => {
     const label = document.createElement("label");
     label.className = "choice-item";
-    const checked = (guest.games || []).includes(gameKey) ? "checked" : "";
-    label.innerHTML = `<input type="checkbox" value="${guest.id}" ${checked}><span>${escapeHtml(guest.name)}</span>`;
+    label.innerHTML = `<input type="checkbox" value="${guest.id}" ${(guest.games || []).includes(gameKey) ? "checked" : ""}><span>${escapeHtml(guest.name)}</span>`;
     choices.appendChild(label);
-  }
+  });
   gameDialog.showModal();
 }
 
-function escapeHtml(value) {
-  return String(value).replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[char]));
-}
-
 $("#openGuestbookButton").addEventListener("click", openGuestbook);
-$("#addGuestFieldButton").addEventListener("click", () => addNameField());
+$("#addGuestFieldButton").addEventListener("click", () => {
+  addNameField();
+  $("#guestNameFields").lastElementChild.querySelector("input").focus();
+});
+$("#guestbookMessage").addEventListener("input", (event) => $("#messageCharacterCount").textContent = event.target.value.length);
 $("#gameList").addEventListener("click", (event) => {
   const button = event.target.closest("[data-game]");
   if (button) openGame(button.dataset.game);
 });
-$("#openGuestbookFromGame").addEventListener("click", () => {
-  gameDialog.close();
-  openGuestbook();
-});
-
-document.querySelectorAll("[data-close-dialog]").forEach((button) => {
-  button.addEventListener("click", () => button.closest("dialog").close());
-});
+$("#openGuestbookFromGame").addEventListener("click", () => { gameDialog.close(); openGuestbook(); });
+document.querySelectorAll("[data-close-dialog]").forEach((button) => button.addEventListener("click", () => button.closest("dialog").close()));
 
 $("#guestbookForm").addEventListener("submit", async (event) => {
   event.preventDefault();
+  const errorLine = $("#guestbookFormError");
+  errorLine.textContent = "";
+  const rawNames = [...$("#guestNameFields").querySelectorAll("input")].map((input) => input.value.trim()).filter(Boolean);
+  const names = [...new Map(rawNames.map((name) => [name.toLowerCase(), name])).values()];
+  const message = $("#guestbookMessage").value.trim();
+  if (!names.length) {
+    errorLine.textContent = "Please enter at least one guest name.";
+    return $("#guestNameFields input")?.focus();
+  }
   const button = $("#submitGuestbookButton");
-  const names = [...$("#guestNameFields").querySelectorAll("input")].map((input) => input.value.trim()).filter(Boolean);
-  if (!names.length) return showToast("Please enter at least one name.");
   button.disabled = true;
-  button.textContent = "Checking In…";
+  button.textContent = "Checking everyone in…";
   try {
-    const rows = await api.registerGuests(names);
+    const rows = await api.registerGuests(names, message);
     await refreshDeviceState();
     guestbookDialog.close();
-    showToast(`${rows.length} ${rows.length === 1 ? "guest was" : "guests were"} checked in.`);
+    document.activeElement?.blur?.();
+    showToast(`${rows?.length || names.length} ${names.length === 1 ? "person is" : "people are"} checked in.`);
   } catch (error) {
-    showToast(error.message || "The guestbook could not be saved.");
+    const rawMessage = error?.message || "The names could not be saved.";
+    const needsUpgrade = /webbing_register_guests|p_message|schema cache|could not find the function/i.test(rawMessage);
+    errorLine.textContent = needsUpgrade
+      ? "The website is connected, but Supabase still needs the new setup-or-upgrade SQL. Run that SQL once, then try again."
+      : rawMessage;
+    showToast("Check-in was not saved. Please read the message in the guestbook window.");
   } finally {
     button.disabled = false;
-    button.textContent = "Check Everyone In";
+    button.textContent = deviceState.guests?.length ? "Update Check-In" : "Check Everyone In";
   }
 });
 
 $("#gameForm").addEventListener("submit", async (event) => {
   event.preventDefault();
   if (!activeGame) return;
-  const button = $("#saveGameButton");
+  const errorLine = $("#gameFormError");
+  errorLine.textContent = "";
   const selectedIds = [...$("#gameGuestChoices").querySelectorAll("input:checked")].map((input) => input.value);
+  const button = $("#saveGameButton");
   button.disabled = true;
   button.textContent = "Saving…";
   try {
@@ -170,7 +214,7 @@ $("#gameForm").addEventListener("submit", async (event) => {
     gameDialog.close();
     showToast(`${activeGame.title} signup saved.`);
   } catch (error) {
-    showToast(error.message || "The signup could not be saved.");
+    errorLine.textContent = error.message || "The game signup could not be saved.";
   } finally {
     button.disabled = false;
     button.textContent = "Save Players";
@@ -179,9 +223,7 @@ $("#gameForm").addEventListener("submit", async (event) => {
 
 renderItinerary();
 renderGames();
-await refreshDeviceState();
+try { await refreshDeviceState(); }
+catch (error) { showConnectionError(error); }
 setInterval(updateItineraryHighlight, 30000);
 
-if ("serviceWorker" in navigator) {
-  addEventListener("load", () => navigator.serviceWorker.register("./sw.js").catch(console.error));
-}

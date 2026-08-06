@@ -1,3 +1,7 @@
+/*
+  Public browser connection for the Webbing party site.
+  This is a publishable browser key, not a secret/service-role key.
+*/
 window.WEBBING_CONFIG = {
   supabaseUrl: "https://ghnuahsovbpyzrjvbylp.supabase.co",
   supabaseAnonKey: "sb_publishable_1Z7ddDl3qiL-8LRLhtML8Q_EOyJs6E2",
