@@ -1,10 +1,6 @@
-/*
-  Paste your Supabase Project URL and anon/public key below.
-  Until both values are added, the site runs in PREVIEW MODE using this browser only.
-*/
 window.WEBBING_CONFIG = {
-  supabaseUrl: "PASTE_YOUR_SUPABASE_URL_HERE",
-  supabaseAnonKey: "PASTE_YOUR_SUPABASE_ANON_KEY_HERE",
+  supabaseUrl: "https://ghnuahsovbpyzrjvbylp.supabase.co",
+  supabaseAnonKey: "sb_publishable_1Z7ddDl3qiL-8LRLhtML8Q_EOyJs6E2",
   eventDate: "2026-08-15",
   timeZone: "America/Los_Angeles",
   venueName: "Pinebrook Neighborhood Clubhouse",
