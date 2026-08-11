@@ -1,37 +1,16 @@
-SAVANNAH & XANDER ENGAGEMENT PARTY WEBSITE — VERSION 4
+WEBBING HOST DELETE UPDATE
 
-THIS VERSION FIXES
-- Guest names save when Check Everyone In is pressed.
-- The guestbook window closes automatically after a successful save.
-- Guests may enter up to ten names and one keepsake message.
-- The host page has simple expandable sections: Itinerary, Signed-In Names, Game Signups, Guestbook, and Party Controls.
-- The Guestbook opens as decorated swipeable pages with the message in script and the signers' names.
-- Spider artwork is inline in the HTML so it cannot break because an image file is missing.
-- Old service-worker caches are removed so phones do not keep showing the earlier broken version.
-- The blurry modal backdrop and hidden sticky bottom button were removed.
+Replace these three files in the root of the GitHub webbing repository:
+- host.html
+- host.js
+- styles.css
 
-IMPORTANT UPDATE ORDER
-1. In Supabase, open SQL Editor > New query.
-2. Paste the ENTIRE setup-or-upgrade.sql file and press Run.
-3. Wait for a success message.
-4. In GitHub, open the webbing repository.
-5. Delete or replace the old site files with every file and folder from this package. Keep the assets folder.
-6. Commit the changes.
-7. Wait about two minutes for GitHub Pages.
-8. On the phone, close the old tab completely and reopen join.html with ?v=4 added once.
+No assets folder is required.
+No Supabase SQL rerun is required IF the Version 6 SQL was successfully run, because the existing webbing_host_delete_guest RPC is used.
 
-GUEST PAGE
-https://bisket74-eng.github.io/webbing/join.html?v=4
-
-HOST PAGE
-https://bisket74-eng.github.io/webbing/host.html?v=4
-Initial PIN: 4826
-
-TEST
-- Open the guest page.
-- Tap Sign the Guestbook.
-- Enter a name and optional message.
-- Tap Check Everyone In.
-- The window should close and a success message should appear.
-- Open the host page, enter 4826, open Signed-In Names, and confirm the name is present.
-- Open Guestbook and swipe through the decorated message pages.
+What this adds:
+- A small X beside every signed-in name on the Host > Signed-In Names panel.
+- Confirmation before deletion.
+- Deleting the guest removes the database guest record and all game signups through the existing host delete RPC, and therefore removes the guest from the host guestbook view too.
+- The delete control exists only on the host page.
+- Versioned URLs are bumped to 7.0.0 to reduce stale browser caching.
