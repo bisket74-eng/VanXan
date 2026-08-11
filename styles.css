@@ -562,3 +562,27 @@ hr { margin: 18px 0; border: 0; border-top: 1px solid var(--line); }
   .print-guestbook .guestbook-book { display: block; overflow: visible; }
   .print-guestbook .guestbook-page { min-height: 9in; margin: 0 0 .2in; break-after: page; box-shadow: none; }
 }
+
+/* Host signed-in guest removal */
+.host-name-row { grid-template-columns: 34px 1fr 34px; }
+.host-delete-guest {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-left: auto;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--purple);
+  font: 700 1.35rem/1 Inter, sans-serif;
+  cursor: pointer;
+}
+.host-delete-guest:hover,
+.host-delete-guest:focus-visible {
+  background: rgba(88,25,79,.09);
+  outline: 2px solid rgba(88,25,79,.2);
+  outline-offset: 1px;
+}
+.host-delete-guest:disabled { opacity: .45; cursor: wait; }

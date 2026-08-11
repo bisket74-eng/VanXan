@@ -1,4 +1,4 @@
-import { createApi, games, itinerary, getPartyTime, minutesFrom24h, config } from "./shared.js?v=6.0.0";
+import { createApi, games, itinerary, getPartyTime, minutesFrom24h, config } from "./shared.js?v=7.0.0";
 
 const api = await createApi();
 const cfg = config();
@@ -130,7 +130,11 @@ function updateHostItineraryHighlight() {
 function renderGuestNames() {
   const guests = (data.guests || []).slice().sort((a, b) => a.name.localeCompare(b.name));
   $("#guestCards").innerHTML = guests.map((guest, index) => `
-    <div class="host-name-row"><span>${index + 1}</span><strong>${escapeHtml(guest.name)}</strong></div>
+    <div class="host-name-row">
+      <span>${index + 1}</span>
+      <strong>${escapeHtml(guest.name)}</strong>
+      <button class="host-delete-guest" type="button" data-delete-guest="${escapeHtml(guest.id)}" data-delete-name="${escapeHtml(guest.name)}" aria-label="Remove ${escapeHtml(guest.name)}">×</button>
+    </div>
   `).join("");
   $("#emptyGuestList").hidden = guests.length > 0;
 }
@@ -242,7 +246,26 @@ $("#refreshButton").addEventListener("click", async () => {
   catch (error) { showToast(error.message); }
 });
 
-document.addEventListener("click", (event) => {
+document.addEventListener("click", async (event) => {
+  const deleteButton = event.target.closest("[data-delete-guest]");
+  if (deleteButton) {
+    const guestId = deleteButton.dataset.deleteGuest;
+    const guestName = deleteButton.dataset.deleteName || "this guest";
+    if (!guestId) return;
+    const confirmed = confirm(`Remove ${guestName} completely?\n\nThis will remove the guest from the signed-in list and all game signups, and remove their guestbook entry from the host page.`);
+    if (!confirmed) return;
+    deleteButton.disabled = true;
+    try {
+      await api.hostDeleteGuest(hostPin, guestId);
+      await loadDashboard();
+      showToast(`${guestName} was removed.`);
+    } catch (error) {
+      deleteButton.disabled = false;
+      showToast(error.message || "The guest could not be removed.");
+    }
+    return;
+  }
+
   const toggle = event.target.closest("[data-toggle-form]");
   if (toggle) toggleCompactForm(toggle.dataset.toggleForm);
 
