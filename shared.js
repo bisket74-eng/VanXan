@@ -28,7 +28,7 @@ export const anytimeActivities = [
     icon: "💍",
     title: "Hidden Ring Search",
     where: "Everywhere • Any time",
-    detail: "Rings are hidden all over the party. Start looking the moment you arrive and keep every ring you find. Rings are counted at 7:15 PM, and whoever has the most wins a prize."
+    detail: "Look for little rings with spiders and gems on them — they’re hidden all over the party. Start looking the moment you arrive and keep every ring you find. Rings are counted at 7:15 PM, and whoever has the most wins a prize."
   },
   {
     icon: "🏠",
