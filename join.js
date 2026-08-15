@@ -1,4 +1,4 @@
-import { createApi, games, itinerary, getPartyTime, minutesFrom24h, config } from "./shared.js?v=6.0.0";
+import { createApi, games, itinerary, anytimeActivities, getPartyTime, minutesFrom24h, config } from "./shared.js?v=8.0.0";
 
 const api = await createApi();
 const cfg = config();
@@ -65,6 +65,19 @@ function updateItineraryHighlight() {
     if (currentMinutes >= end) rows[index]?.classList.add("past");
     if (currentMinutes >= start && currentMinutes < end) rows[index]?.classList.add("active");
   });
+}
+
+function renderAnytime() {
+  $("#anytimeList").innerHTML = anytimeActivities.map((item) => `
+    <article class="anytime-item">
+      <span class="anytime-icon" aria-hidden="true">${item.icon}</span>
+      <div>
+        <strong>${escapeHtml(item.title)}</strong>
+        <small>${escapeHtml(item.where)}</small>
+        <p>${escapeHtml(item.detail)}</p>
+      </div>
+    </article>
+  `).join("");
 }
 
 function renderGames() {
@@ -346,6 +359,7 @@ window.addEventListener("resize", syncVisualViewport);
 syncVisualViewport();
 
 renderItinerary();
+renderAnytime();
 renderGames();
 try { await refreshDeviceState(); }
 catch (error) { showConnectionError(error); }

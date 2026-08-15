@@ -4,21 +4,44 @@ const LOCAL_DB_KEY = "webbing_party_preview_v3";
 const VALID_GAMES = ["saran", "house", "bingo", "pinata"];
 
 export const itinerary = [
-  { time: "3:00–3:45 PM", start: "15:00", end: "15:45", title: "Arrival, Mingling & Hidden Ring Search Begins" },
-  { time: "3:45–4:15 PM", start: "15:45", end: "16:15", title: "Breaking Bread with Savannah & Xander" },
-  { time: "4:15–4:45 PM", start: "16:15", end: "16:45", title: "Saran Wrap Ball" },
-  { time: "4:45–5:30 PM", start: "16:45", end: "17:30", title: "Build Us a House, Piñata, Dancing & Outdoor Fun" },
-  { time: "5:30–6:15 PM", start: "17:30", end: "18:15", title: "Dinner & Guest Toasts" },
-  { time: "6:15–6:45 PM", start: "18:15", end: "18:45", title: "Dessert & Bingo" },
-  { time: "6:45–7:00 PM", start: "18:45", end: "19:00", title: "Ring Count & Prizes" },
-  { time: "7:00–8:00 PM", start: "19:00", end: "20:00", title: "A Special Ending" }
+  { time: "3:00–3:45 PM", start: "15:00", end: "15:45", title: "Arrival & Mingling" },
+  { time: "3:45–4:15 PM", start: "15:45", end: "16:15", title: "Breaking Bread" },
+  { time: "4:15–5:15 PM", start: "16:15", end: "17:15", title: "Piñata, Saran Wrap Ball & KOR·UP·SHUN" },
+  { time: "5:15–6:15 PM", start: "17:15", end: "18:15", title: "Dinner & Toasts" },
+  { time: "6:15–6:45 PM", start: "18:15", end: "18:45", title: "Savannah & Xander’s Webbing" },
+  { time: "6:45–7:15 PM", start: "18:45", end: "19:15", title: "Dessert & Bingo" },
+  { time: "7:15–7:30 PM", start: "19:15", end: "19:30", title: "Ring Count & Prizes" },
+  { time: "7:30 PM – End", start: "19:30", end: "20:00", title: "Dancing" }
 ];
 
+// Note: the "house" key is reused for KOR·UP·SHUN so that no Supabase changes are
+// needed. Build Us a House no longer takes sign-ups, so the key was free.
 export const games = [
-  { key: "saran", title: "Saran Wrap Ball", icon: "🧶", detail: "4:15–4:45 PM" },
-  { key: "house", title: "Build Us a House", icon: "🏠", detail: "4:45–5:30 PM • Spaghetti-and-marshmallow challenge" },
-  { key: "bingo", title: "Bingo", icon: "▦", detail: "6:15–6:45 PM • During dessert" },
-  { key: "pinata", title: "Piñata", icon: "♡", detail: "4:45–5:30 PM • During the activity block" }
+  { key: "pinata", title: "Piñata", icon: "♡", detail: "4:15–5:15 PM" },
+  { key: "saran", title: "Saran Wrap Ball", icon: "🧶", detail: "4:15–5:15 PM" },
+  { key: "house", title: "KOR·UP·SHUN", icon: "🎭", detail: "4:15–5:15 PM • Sign up to play" },
+  { key: "bingo", title: "Bingo", icon: "▦", detail: "6:45–7:15 PM • During dessert" }
+];
+
+export const anytimeActivities = [
+  {
+    icon: "💍",
+    title: "Hidden Ring Search",
+    where: "Everywhere • Any time",
+    detail: "Rings are hidden all over the party. Start looking the moment you arrive and keep every ring you find. Rings are counted at 7:15 PM, and whoever has the most wins a prize."
+  },
+  {
+    icon: "🏠",
+    title: "Build Us a House",
+    where: "Back courtyard • Any time",
+    detail: "Spaghetti and marshmallows are set out all evening. No sign-up needed — build whenever you like. Savannah and Xander judge the houses at 7:15 PM during prizes."
+  },
+  {
+    icon: "💃",
+    title: "Dancing",
+    where: "Back room • Any time",
+    detail: "The dance floor is open all party long, and everyone dances together from 7:30 PM until the end."
+  }
 ];
 
 function configured() {

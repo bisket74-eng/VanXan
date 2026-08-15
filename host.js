@@ -1,4 +1,4 @@
-import { createApi, games, itinerary, getPartyTime, minutesFrom24h, config } from "./shared.js?v=7.0.0";
+import { createApi, games, itinerary, anytimeActivities, getPartyTime, minutesFrom24h, config } from "./shared.js?v=8.0.0";
 
 const api = await createApi();
 const cfg = config();
@@ -109,6 +109,15 @@ function renderItinerary() {
       <em>Happening now</em>
     </div>
   `).join("");
+  const anytimeBox = $("#hostAnytime");
+  if (anytimeBox) {
+    anytimeBox.innerHTML = anytimeActivities.map((item) => `
+      <div class="host-anytime-row">
+        <b aria-hidden="true">${item.icon}</b>
+        <span><strong>${escapeHtml(item.title)}</strong><small>${escapeHtml(item.where)}</small></span>
+      </div>
+    `).join("");
+  }
   updateHostItineraryHighlight();
 }
 

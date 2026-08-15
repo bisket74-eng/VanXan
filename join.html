@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Great+Vibes&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=6.0.0">
+  <link rel="stylesheet" href="./styles.css?v=8.0.0">
 </head>
 <body class="guest-page">
   <div class="ornate-border" aria-hidden="true"><span class="web-corner web-tl"></span><span class="web-corner web-tr"></span><span class="web-corner web-bl"></span><span class="web-corner web-br"></span></div>
@@ -59,12 +59,17 @@
         <div class="live-clock"><span class="clock-dot"></span><span id="currentTimeLabel">Current time</span></div>
       </div>
       <div id="itineraryList" class="itinerary-list"></div>
-      <p class="ring-note">Start searching for hidden engagement rings as soon as you arrive. Keep every ring you find until the ring count.</p>
+    </section>
+
+    <section class="panel anytime-panel" aria-labelledby="anytimeTitle">
+      <div class="section-heading"><p class="eyebrow">No sign-up needed</p><h2 id="anytimeTitle">Any Time, All Party Long</h2></div>
+      <p class="section-copy">These three are open from the moment you arrive until the party ends. Just walk up and join in.</p>
+      <div id="anytimeList" class="anytime-list"></div>
     </section>
 
     <section class="panel games-panel" aria-labelledby="gamesTitle">
       <div class="section-heading"><p class="eyebrow">Choose your fun</p><h2 id="gamesTitle">Sign Up to Play</h2></div>
-      <p class="section-copy">Tap a game, then choose the checked-in names that want to play.</p>
+      <p class="section-copy">These games need players signed up ahead of time. Tap a game, then choose the checked-in names that want to play.</p>
       <div id="gameList" class="game-list"></div>
       <p class="bingo-note">Printed bingo cards will be available if needed.</p>
     </section>
@@ -128,7 +133,7 @@
       caches.keys().then((keys) => Promise.all(keys.filter((key) => key.startsWith("webbing-party-")).map((key) => caches.delete(key)))).catch(() => {});
     }
   </script>
-  <script src="./supabase-config.js?v=6.0.0"></script>
-  <script type="module" src="./join.js?v=6.0.0"></script>
+  <script src="./supabase-config.js?v=8.0.0"></script>
+  <script type="module" src="./join.js?v=8.0.0"></script>
 </body>
 </html>
