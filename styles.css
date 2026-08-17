@@ -624,3 +624,142 @@ hr { margin: 18px 0; border: 0; border-top: 1px solid var(--line); }
   outline-offset: 1px;
 }
 .host-delete-guest:disabled { opacity: .45; cursor: wait; }
+
+/* Guestbook duplex keepsake printing: two 5x7 cards on each landscape letter sheet. */
+#guestbookPrintRoot { display: none; }
+
+@media print {
+  @page { size: letter landscape; margin: 0; }
+
+  .print-guestbook #guestbookSection,
+  .print-guestbook .host-sections,
+  .print-guestbook .host-shell,
+  .print-guestbook .guestbook-book {
+    display: none !important;
+  }
+
+  .print-guestbook #guestbookPrintRoot {
+    display: block !important;
+    width: 11in;
+    margin: 0;
+  }
+
+  .print-guestbook .print-sheet {
+    width: 11in;
+    height: 8.5in;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: .25in;
+    padding: .75in .375in;
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .print-guestbook .print-sheet:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  .print-guestbook .print-card {
+    position: relative;
+    width: 5in;
+    height: 7in;
+    flex: 0 0 5in;
+    box-sizing: border-box;
+    overflow: hidden;
+    border: 1.5px solid rgba(184,137,56,.62);
+    background: linear-gradient(145deg, #fffdf8, #f9efe0);
+    box-shadow: inset 0 0 0 6px rgba(255,255,255,.52);
+  }
+
+  .print-guestbook .print-front {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: .48in .42in .34in .68in;
+    text-align: center;
+  }
+
+  .print-guestbook .print-front .guestbook-page-label {
+    margin: .08in 0 .16in;
+    font-size: 11pt;
+  }
+
+  .print-guestbook .print-front .guestbook-photo {
+    width: 3.65in;
+    max-height: 2.15in;
+    margin-bottom: .16in;
+    border-width: 4px;
+    border-radius: 10px;
+    box-shadow: none;
+  }
+
+  .print-guestbook .print-front blockquote {
+    margin: 0;
+    font-size: 28pt;
+    line-height: 1.08;
+  }
+
+  .print-guestbook .print-front .guestbook-signature {
+    margin-top: .22in;
+    font-size: 25pt;
+  }
+
+  .print-guestbook .print-front time {
+    margin-top: .08in;
+    font-size: 8pt;
+  }
+
+  .print-guestbook .print-front .page-ornament {
+    font-size: 12pt;
+  }
+
+  .print-guestbook .print-back {
+    padding: .45in .68in .35in .42in;
+  }
+
+  .print-guestbook .photo-placeholder {
+    position: absolute;
+    width: 1.42in;
+    height: 1.42in;
+    box-sizing: border-box;
+    border: 1.5px dashed rgba(88,25,79,.42);
+    background: rgba(255,255,255,.28);
+  }
+
+  .print-guestbook .photo-placeholder::after {
+    content: "PHOTO";
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: rgba(88,25,79,.36);
+    font-family: var(--serif);
+    font-size: 8pt;
+    letter-spacing: .12em;
+  }
+
+  /* Slightly staggered so the back feels scrapbook-like rather than rigid. */
+  .print-guestbook .photo-one { top: 1.02in; left: .62in; rotate: -2deg; }
+  .print-guestbook .photo-two { top: 2.92in; right: .68in; rotate: 2.2deg; }
+  .print-guestbook .photo-three { bottom: .76in; left: 1.34in; rotate: -1.3deg; }
+
+  .print-guestbook .print-front::before,
+  .print-guestbook .print-front::after,
+  .print-guestbook .print-back::before,
+  .print-guestbook .print-back::after {
+    content: "❦";
+    position: absolute;
+    color: rgba(88,25,79,.18);
+    font-size: 42pt;
+    line-height: 1;
+  }
+
+  .print-guestbook .print-front::before,
+  .print-guestbook .print-back::before { top: -.08in; left: .08in; rotate: -18deg; }
+  .print-guestbook .print-front::after,
+  .print-guestbook .print-back::after { right: .08in; bottom: -.08in; rotate: 162deg; }
+}

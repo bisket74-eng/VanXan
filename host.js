@@ -227,9 +227,55 @@ function downloadCsv() {
   setTimeout(() => URL.revokeObjectURL(link.href), 500);
 }
 
+function buildGuestbookPrint() {
+  let printRoot = document.getElementById("guestbookPrintRoot");
+  if (!printRoot) {
+    printRoot = document.createElement("div");
+    printRoot.id = "guestbookPrintRoot";
+    document.body.appendChild(printRoot);
+  }
+
+  const esc = escapeHtml;
+  const chunks = [];
+  for (let i = 0; i < bookEntries.length; i += 2) chunks.push(bookEntries.slice(i, i + 2));
+
+  printRoot.innerHTML = chunks.map((pair, sheetIndex) => {
+    const fronts = pair.map((entry) => {
+      const photoUrl = entry.photoPath ? api.publicPhotoUrl(entry.photoPath) : "";
+      return `
+        <article class="print-card print-front">
+          <span class="page-web top-left" aria-hidden="true"></span><span class="page-web bottom-right" aria-hidden="true"></span>
+          <div class="page-ornament">❦ ♡ ❦</div>
+          <p class="guestbook-page-label">Savannah &amp; Xander’s Guestbook</p>
+          ${photoUrl ? `<img class="guestbook-photo" src="${esc(photoUrl)}" alt="Guestbook photo from ${esc(entry.names.join(" and "))}">` : ""}
+          <blockquote>${entry.message ? esc(entry.message) : "Congratulations and best of luck!"}</blockquote>
+          <div class="guestbook-signature">${entry.names.map(esc).join(" &amp; ")}</div>
+          <time>${esc(formatDate(entry.created_at))}</time>
+        </article>`;
+    }).join("");
+
+    const backs = pair.map(() => `
+      <article class="print-card print-back">
+        <div class="photo-placeholder photo-one" aria-label="Photo spot"></div>
+        <div class="photo-placeholder photo-two" aria-label="Photo spot"></div>
+        <div class="photo-placeholder photo-three" aria-label="Photo spot"></div>
+      </article>`).join("");
+
+    return `
+      <section class="print-sheet print-sheet-front" data-sheet="${sheetIndex + 1}">${fronts}</section>
+      <section class="print-sheet print-sheet-back" data-sheet="${sheetIndex + 1}">${backs}</section>`;
+  }).join("");
+
+  return printRoot;
+}
+
 function printMode(className) {
+  if (className === "print-guestbook") buildGuestbookPrint();
   document.body.classList.add(className);
-  const cleanup = () => document.body.classList.remove(className);
+  const cleanup = () => {
+    document.body.classList.remove(className);
+    document.getElementById("guestbookPrintRoot")?.remove();
+  };
   addEventListener("afterprint", cleanup, { once: true });
   print();
   setTimeout(cleanup, 1500);
