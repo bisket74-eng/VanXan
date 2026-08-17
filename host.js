@@ -257,7 +257,7 @@ function buildGuestbookPrint() {
       const message = entry.message ? entry.message : "Congratulations and best of luck!";
       return `
         <article class="print-card print-front">
-          <span class="print-floral print-floral-tl" aria-hidden="true"></span><span class="print-floral print-floral-br" aria-hidden="true"></span>
+          <span class="print-floral print-floral-tl" aria-hidden="true"></span><span class="print-floral print-floral-tr" aria-hidden="true"></span><span class="print-floral print-floral-bl" aria-hidden="true"></span><span class="print-floral print-floral-br" aria-hidden="true"></span>
           <header class="print-page-header">
             <div class="print-page-title">Savannah <span aria-hidden="true">♥</span> Xander</div>
           </header>
@@ -272,7 +272,7 @@ function buildGuestbookPrint() {
 
     const backs = pair.map((entry) => `
       <article class="print-card print-back">
-        <span class="print-floral print-floral-tl" aria-hidden="true"></span><span class="print-floral print-floral-br" aria-hidden="true"></span>
+        <span class="print-floral print-floral-tl" aria-hidden="true"></span><span class="print-floral print-floral-tr" aria-hidden="true"></span><span class="print-floral print-floral-bl" aria-hidden="true"></span><span class="print-floral print-floral-br" aria-hidden="true"></span>
         <div class="photo-stack" aria-label="Two 3 by 5 photo spots">
           <div class="photo-placeholder photo-one" aria-label="Top 3 by 5 photo spot"></div>
           <div class="photo-placeholder photo-two" aria-label="Bottom 3 by 5 photo spot"></div>
@@ -291,38 +291,80 @@ function fitGuestbookPrintText() {
   const root = document.getElementById("guestbookPrintRoot");
   if (!root) return;
 
+  // The print stylesheet is inside @media print, so the browser does not
+  // apply the final card dimensions while the print dialog is being prepared.
+  // Measure each message in a hidden element using the exact print width,
+  // then set the chosen font size inline. This prevents long entries from
+  // being clipped instead of shrinking to fit.
+  const measure = document.createElement("div");
+  measure.setAttribute("aria-hidden", "true");
+  measure.style.cssText = [
+    "position:absolute",
+    "left:-100000px",
+    "top:0",
+    "visibility:hidden",
+    "width:4.15in",
+    "box-sizing:border-box",
+    "white-space:normal",
+    "overflow-wrap:anywhere",
+    "word-break:normal",
+    "text-align:center",
+    "padding:0",
+    "margin:0",
+    "border:0"
+  ].join(";");
+  document.body.appendChild(measure);
+
   root.querySelectorAll(".print-front").forEach((card) => {
     const message = card.querySelector(".print-message");
     if (!message) return;
 
-    // Start large so short and medium messages use the page generously,
-    // then shrink only as much as necessary to keep the complete entry on the card.
-    let size = 28;
-    const minSize = 11;
-    message.style.fontSize = `${size}pt`;
+    const computed = getComputedStyle(message);
+    measure.style.fontFamily = computed.fontFamily;
+    measure.style.fontWeight = computed.fontWeight;
+    measure.style.fontStyle = computed.fontStyle;
+    measure.style.letterSpacing = computed.letterSpacing;
+    measure.style.lineHeight = computed.lineHeight;
+    measure.textContent = message.textContent || "";
 
-    // Give the message the full space available between the header, optional photo,
-    // signature and date.  Measure the natural height rather than relying on a
-    // small fixed max-height so every entry can use the space it actually has.
-    const available = Math.max(80, message.parentElement.clientHeight * 0.78);
-    message.style.maxHeight = `${available}px`;
+    // Most of the 7-inch page is available to the message. Leave room for
+    // the title, signature, date, and the decorative breathing space.
+    const availableHeight = 4.82 * 96;
+    let low = 10;
+    let high = 38;
+    let best = low;
 
-    while (message.scrollHeight > message.clientHeight + 1 && size > minSize) {
-      size -= 0.5;
-      message.style.fontSize = `${size}pt`;
+    // Binary-search the largest size that keeps the COMPLETE message inside
+    // the available print area.
+    while (high - low > 0.25) {
+      const mid = (low + high) / 2;
+      measure.style.fontSize = `${mid}pt`;
+      measure.style.lineHeight = "1.08";
+      if (measure.scrollHeight <= availableHeight) {
+        best = mid;
+        low = mid;
+      } else {
+        high = mid;
+      }
     }
+
+    message.style.fontSize = `${best.toFixed(2)}pt`;
+    message.style.lineHeight = "1.08";
+    message.style.maxHeight = `${availableHeight}px`;
+    message.style.overflow = "visible";
   });
 
   root.querySelectorAll(".guestbook-signature").forEach((signature) => {
     let size = 22;
     signature.style.fontSize = `${size}pt`;
-    while (signature.scrollWidth > signature.clientWidth + 1 && size > 12) {
+    while (size > 12 && signature.scrollWidth > signature.clientWidth + 1) {
       size -= 0.5;
       signature.style.fontSize = `${size}pt`;
     }
   });
-}
 
+  measure.remove();
+}
 function printMode(className) {
   if (className === "print-guestbook") buildGuestbookPrint();
   document.body.classList.add(className);
