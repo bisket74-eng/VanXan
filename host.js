@@ -39,6 +39,18 @@ function formatDate(value) {
   }).format(date);
 }
 
+function formatPrintDate(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: cfg.timeZone || "America/Los_Angeles",
+    month: "long",
+    day: "numeric",
+    year: "numeric"
+  }).format(date);
+}
+
 function groupGuestbookEntries(guests) {
   const grouped = new Map();
   for (const guest of guests) {
@@ -242,23 +254,35 @@ function buildGuestbookPrint() {
   printRoot.innerHTML = chunks.map((pair, sheetIndex) => {
     const fronts = pair.map((entry) => {
       const photoUrl = entry.photoPath ? api.publicPhotoUrl(entry.photoPath) : "";
+      const message = entry.message ? entry.message : "Congratulations and best of luck!";
       return `
         <article class="print-card print-front">
           <span class="page-web top-left" aria-hidden="true"></span><span class="page-web bottom-right" aria-hidden="true"></span>
-          <div class="page-ornament">❦ ♡ ❦</div>
-          <p class="guestbook-page-label">Savannah &amp; Xander’s Guestbook</p>
-          ${photoUrl ? `<img class="guestbook-photo" src="${esc(photoUrl)}" alt="Guestbook photo from ${esc(entry.names.join(" and "))}">` : ""}
-          <blockquote>${entry.message ? esc(entry.message) : "Congratulations and best of luck!"}</blockquote>
-          <div class="guestbook-signature">${entry.names.map(esc).join(" &amp; ")}</div>
-          <time>${esc(formatDate(entry.created_at))}</time>
+          <header class="print-page-header">
+            <div class="page-ornament">❦ ♡ ❦</div>
+            <div class="print-page-title">Savannah &amp; Xander's<br>Engagement Party Guest Book</div>
+          </header>
+          <div class="print-front-content">
+            ${photoUrl ? `<img class="guestbook-photo" src="${esc(photoUrl)}" alt="Guestbook photo from ${esc(entry.names.join(" and "))}">` : ""}
+            <blockquote class="print-message">${esc(message)}</blockquote>
+            <div class="guestbook-signature">${entry.names.map(esc).join(" &amp; ")}</div>
+          </div>
+          <time class="print-page-date">${esc(formatPrintDate(entry.created_at))}</time>
         </article>`;
     }).join("");
 
-    const backs = pair.map(() => `
+    const backs = pair.map((entry) => `
       <article class="print-card print-back">
-        <div class="photo-placeholder photo-one" aria-label="Photo spot"></div>
-        <div class="photo-placeholder photo-two" aria-label="Photo spot"></div>
-        <div class="photo-placeholder photo-three" aria-label="Photo spot"></div>
+        <span class="page-web top-left" aria-hidden="true"></span><span class="page-web bottom-right" aria-hidden="true"></span>
+        <header class="print-page-header">
+          <div class="page-ornament">❦ ♡ ❦</div>
+          <div class="print-page-title">Savannah &amp; Xander's<br>Engagement Party Guest Book</div>
+        </header>
+        <div class="photo-stack" aria-label="Two 3 by 5 photo spots">
+          <div class="photo-placeholder photo-one" aria-label="Top 3 by 5 photo spot"></div>
+          <div class="photo-placeholder photo-two" aria-label="Bottom 3 by 5 photo spot"></div>
+        </div>
+        <time class="print-page-date">${esc(formatPrintDate(entry.created_at))}</time>
       </article>`).join("");
 
     return `
@@ -269,6 +293,29 @@ function buildGuestbookPrint() {
   return printRoot;
 }
 
+function fitGuestbookPrintText() {
+  const root = document.getElementById("guestbookPrintRoot");
+  if (!root) return;
+
+  root.querySelectorAll(".print-message").forEach((message) => {
+    let size = 17;
+    message.style.fontSize = `${size}pt`;
+    while (message.scrollHeight > message.clientHeight + 1 && size > 9.5) {
+      size -= 0.5;
+      message.style.fontSize = `${size}pt`;
+    }
+  });
+
+  root.querySelectorAll(".guestbook-signature").forEach((signature) => {
+    let size = 20;
+    signature.style.fontSize = `${size}pt`;
+    while (signature.scrollWidth > signature.clientWidth + 1 && size > 12) {
+      size -= 0.5;
+      signature.style.fontSize = `${size}pt`;
+    }
+  });
+}
+
 function printMode(className) {
   if (className === "print-guestbook") buildGuestbookPrint();
   document.body.classList.add(className);
@@ -277,8 +324,13 @@ function printMode(className) {
     document.getElementById("guestbookPrintRoot")?.remove();
   };
   addEventListener("afterprint", cleanup, { once: true });
-  print();
-  setTimeout(cleanup, 1500);
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      if (className === "print-guestbook") fitGuestbookPrintText();
+      print();
+      setTimeout(cleanup, 1500);
+    });
+  });
 }
 
 function toggleCompactForm(id) {
