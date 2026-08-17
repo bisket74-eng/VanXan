@@ -304,54 +304,57 @@ function fitGuestbookPrintText() {
   const root = document.getElementById("guestbookPrintRoot");
   if (!root) return;
 
-  const IN = 96;
-  const MIN_MESSAGE = 12;
-  const MAX_MESSAGE = 64;
+  const MIN_MESSAGE = 18;
+  const MAX_MESSAGE = 82;
   const MIN_SIGNATURE = 11;
   const MAX_SIGNATURE = 24;
 
-  const measure = document.createElement("div");
-  measure.setAttribute("aria-hidden", "true");
-  measure.style.cssText = [
-    "position:absolute",
-    "left:-100000px",
-    "top:0",
-    "visibility:hidden",
-    "box-sizing:border-box",
-    "white-space:pre-wrap",
-    "overflow-wrap:break-word",
-    "word-break:normal",
-    "text-align:center",
-    "padding:0",
-    "margin:0",
-    "border:0"
-  ].join(";");
-  document.body.appendChild(measure);
+  // Measure the actual printed element rather than a detached measuring div.
+  // This is important for Great Vibes: the browser must use the loaded webfont
+  // and the exact same width/line wrapping that will be printed.
+  const fitsActual = (el, fontSize, maxHeight) => {
+    el.style.fontSize = `${fontSize.toFixed(2)}pt`;
+    el.style.lineHeight = "1.03";
+    el.style.maxHeight = "none";
+    el.style.overflow = "visible";
 
-  const fits = (fontSize, fontFamily, fontWeight, fontStyle, width, maxHeight, lineHeight, text) => {
-    measure.style.width = `${width}px`;
-    measure.style.fontFamily = fontFamily;
-    measure.style.fontWeight = fontWeight;
-    measure.style.fontStyle = fontStyle;
-    measure.style.fontSize = `${fontSize}pt`;
-    measure.style.lineHeight = String(lineHeight);
-    measure.textContent = text || "";
-    return measure.scrollHeight <= maxHeight + 1 && measure.scrollWidth <= width + 1;
+    // Force layout before reading dimensions.
+    void el.offsetHeight;
+    const height = el.scrollHeight;
+    const width = el.scrollWidth;
+    const availableWidth = el.clientWidth || el.getBoundingClientRect().width;
+    return height <= maxHeight + 2 && width <= availableWidth + 2;
   };
 
-  const bestFontSize = ({ text, fontFamily, fontWeight, fontStyle, width, maxHeight, low, high, lineHeight }) => {
+  const bestActualFontSize = (el, maxHeight, low, high) => {
     let lo = low;
     let hi = high;
     let best = low;
+
+    // First make sure the minimum is actually safe.
+    if (!fitsActual(el, low, maxHeight)) {
+      // If even the minimum cannot fit, keep it at minimum and let the
+      // natural layout use the available width/height.
+      el.style.fontSize = `${low.toFixed(2)}pt`;
+      el.style.lineHeight = "1.03";
+      el.style.maxHeight = `${maxHeight}px`;
+      return low;
+    }
+
     while (hi - lo > 0.10) {
       const mid = (lo + hi) / 2;
-      if (fits(mid, fontFamily, fontWeight, fontStyle, width, maxHeight, lineHeight, text)) {
+      if (fitsActual(el, mid, maxHeight)) {
         best = mid;
         lo = mid;
       } else {
         hi = mid;
       }
     }
+
+    el.style.fontSize = `${best.toFixed(2)}pt`;
+    el.style.lineHeight = "1.03";
+    el.style.maxHeight = `${maxHeight}px`;
+    el.style.overflow = "visible";
     return best;
   };
 
@@ -363,25 +366,15 @@ function fitGuestbookPrintText() {
     const photo = card.querySelector(".guestbook-photo");
     if (!content || !group || !message || !signature) return;
 
-    // Use the actual laid-out 5x7 geometry. The front has a larger left
-    // binding margin, so the usable writing width is the group's real width.
-    const width = Math.max(220, group.getBoundingClientRect().width - 2);
+    // Symmetric layout: keep the guest content centered on the 5x7 card.
+    const contentWidth = Math.max(240, group.getBoundingClientRect().width);
+    group.style.width = `${Math.min(contentWidth, 4.18 * 96)}px`;
+
     const contentHeight = Math.max(250, content.getBoundingClientRect().height);
 
-    const sigStyle = getComputedStyle(signature);
-    const sigMaxHeight = Math.max(28, Math.min(0.62 * IN, contentHeight * 0.14));
-    const sigSize = bestFontSize({
-      text: signature.textContent || "",
-      fontFamily: sigStyle.fontFamily,
-      fontWeight: sigStyle.fontWeight,
-      fontStyle: sigStyle.fontStyle,
-      width,
-      maxHeight: sigMaxHeight,
-      low: MIN_SIGNATURE,
-      high: MAX_SIGNATURE,
-      lineHeight: 1
-    });
-    signature.style.fontSize = `${sigSize.toFixed(2)}pt`;
+    // Signature is fitted first so the message gets the remaining room.
+    const sigMaxHeight = Math.max(30, Math.min(60, contentHeight * 0.11));
+    bestActualFontSize(signature, sigMaxHeight, MIN_SIGNATURE, MAX_SIGNATURE);
     signature.style.lineHeight = "1";
 
     let photoHeight = 0;
@@ -389,42 +382,28 @@ function fitGuestbookPrintText() {
       const naturalRatio = photo.naturalWidth && photo.naturalHeight
         ? photo.naturalHeight / photo.naturalWidth
         : 0.6;
-      photoHeight = Math.min(1.25 * IN, Math.max(0.5 * IN, width * naturalRatio));
-      photo.style.width = `${Math.min(3.55 * IN, width)}px`;
+      photoHeight = Math.min(1.25 * 96, Math.max(0.5 * 96, contentWidth * naturalRatio));
+      photo.style.width = `${Math.min(3.65 * 96, contentWidth)}px`;
       photo.style.maxHeight = `${photoHeight}px`;
       photo.style.height = "auto";
       photo.style.objectFit = "contain";
     }
 
-    const photoGap = photo ? 0.07 * IN : 0;
-    const signatureGap = 0.10 * IN;
-    // Give the message nearly all of the available vertical space. The
-    // flex container then centers the complete message + signature group.
+    const photoGap = photo ? 0.07 * 96 : 0;
+    const signatureGap = 0.10 * 96;
     const messageHeight = Math.max(
-      1.15 * IN,
-      contentHeight - photoHeight - photoGap - sigMaxHeight - signatureGap - 0.05 * IN
+      1.35 * 96,
+      contentHeight - photoHeight - photoGap - sigMaxHeight - signatureGap - 0.04 * 96
     );
 
-    const msgStyle = getComputedStyle(message);
-    const messageSize = bestFontSize({
-      text: message.textContent || "",
-      fontFamily: msgStyle.fontFamily,
-      fontWeight: msgStyle.fontWeight,
-      fontStyle: msgStyle.fontStyle,
-      width,
-      maxHeight: messageHeight,
-      low: MIN_MESSAGE,
-      high: MAX_MESSAGE,
-      lineHeight: 1.03
-    });
-
-    message.style.fontSize = `${messageSize.toFixed(2)}pt`;
+    // Start large and shrink only when the actual rendered text truly needs it.
+    bestActualFontSize(message, messageHeight, MIN_MESSAGE, MAX_MESSAGE);
     message.style.lineHeight = "1.03";
     message.style.maxHeight = `${messageHeight}px`;
+    message.style.overflow = "visible";
   });
-
-  measure.remove();
 }
+
 function printMode(className) {
   if (className === "print-guestbook") buildGuestbookPrint();
   document.body.classList.add(className);
