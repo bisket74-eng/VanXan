@@ -14,7 +14,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Great+Vibes&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css?v=8.0.0">
+  <link rel="stylesheet" href="./styles.css?v=8.1.0">
 </head>
 <body class="guest-page">
   <div class="ornate-border" aria-hidden="true"><span class="web-corner web-tl"></span><span class="web-corner web-tr"></span><span class="web-corner web-bl"></span><span class="web-corner web-br"></span></div>
@@ -123,7 +123,7 @@
       caches.keys().then((keys) => Promise.all(keys.filter((key) => key.startsWith("webbing-party-")).map((key) => caches.delete(key)))).catch(() => {});
     }
   </script>
-  <script src="./supabase-config.js?v=8.0.0"></script>
-  <script type="module" src="./join.js?v=8.0.0"></script>
+  <script src="./supabase-config.js?v=8.1.0"></script>
+  <script type="module" src="./join.js?v=8.1.0"></script>
 </body>
 </html>

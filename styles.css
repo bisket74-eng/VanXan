@@ -595,10 +595,6 @@ hr { margin: 18px 0; border: 0; border-top: 1px solid var(--line); }
   .print-signed-names .host-sections > details { display: none !important; }
   .print-signed-names #namesSection { display: block !important; }
   .print-signed-names .host-name-scroll { max-height: none; overflow: visible; }
-  .print-guestbook .host-sections > details { display: none !important; }
-  .print-guestbook #guestbookSection { display: block !important; }
-  .print-guestbook .guestbook-book { display: block; overflow: visible; }
-  .print-guestbook .guestbook-page { min-height: 9in; margin: 0 0 .2in; break-after: page; box-shadow: none; }
 }
 
 /* Host signed-in guest removal */
@@ -625,238 +621,289 @@ hr { margin: 18px 0; border: 0; border-top: 1px solid var(--line); }
 }
 .host-delete-guest:disabled { opacity: .45; cursor: wait; }
 
-/* Guestbook duplex keepsake printing: two 5x7 cards on each landscape letter sheet. */
+/* ============================================================
+   GUESTBOOK KEEPSAKE PRINTING — two 5x7 cards per landscape sheet
+   ------------------------------------------------------------
+   Sheet math, horizontal:  .25 + 5 + .5 + 5 + .25 = 11in
+   Sheet math, vertical:    .75 + 7 + .75          = 8.5in
+
+   Cut once down the exact middle of the sheet (5.5in) and each
+   half is 5.5 x 8.5 with the 5x7 card perfectly centered:
+   .25in of white on the left and right, .75in top and bottom.
+   Trim those away and you have a true 5x7.
+
+   IMPORTANT: all of the geometry below lives OUTSIDE @media print
+   so the auto-fit routine in host.js can measure the real printed
+   layout on screen first. Measuring a display:none element was
+   what made the message type come out random sizes.
+   ============================================================ */
+
 #guestbookPrintRoot { display: none; }
 
-@media print {
-  @page { size: letter landscape; margin: 0; }
+/* Offscreen staging: only on while host.js is measuring/fitting text. */
+body.gb-measuring #guestbookPrintRoot {
+  display: block;
+  position: fixed;
+  top: 0;
+  left: -40in;
+  z-index: -1;
+  width: 11in;
+  opacity: 0;
+  pointer-events: none;
+}
 
-  .print-guestbook #guestbookSection,
+#guestbookPrintRoot .print-sheet {
+  box-sizing: border-box;
+  width: 11in;
+  height: 8.5in;
+  padding: .75in .25in;
+  display: grid;
+  grid-template-columns: 5in 5in;
+  grid-template-rows: 7in;
+  justify-content: space-between;   /* leaves exactly .5in between the cards */
+  align-content: center;
+  background-color: #fff;
+  break-after: page;
+  page-break-after: always;
+  break-inside: avoid;
+}
+
+/* Hairline trim guides. The opaque cards paint over the middle of each
+   line, so only the parts sitting in the margins show up — cut on them.
+   Delete this one rule if you would rather print with no guide lines. */
+#guestbookPrintRoot .print-sheet {
+  background-image:
+    linear-gradient(#b9b0a4, #b9b0a4), linear-gradient(#b9b0a4, #b9b0a4),
+    linear-gradient(#b9b0a4, #b9b0a4), linear-gradient(#b9b0a4, #b9b0a4),
+    linear-gradient(#b9b0a4, #b9b0a4),
+    linear-gradient(#b9b0a4, #b9b0a4), linear-gradient(#b9b0a4, #b9b0a4);
+  background-repeat: no-repeat;
+  background-size:
+    .5pt 100%, .5pt 100%, .5pt 100%, .5pt 100%, .5pt 100%,
+    100% .5pt, 100% .5pt;
+  background-position:
+    .25in 0, 5.25in 0, 5.5in 0, 5.75in 0, 10.75in 0,
+    0 .75in, 0 7.75in;
+}
+
+#guestbookPrintRoot .print-sheet:last-child {
+  break-after: auto;
+  page-break-after: auto;
+}
+
+#guestbookPrintRoot .print-card {
+  position: relative;
+  box-sizing: border-box;
+  width: 5in;
+  height: 7in;
+  display: flex;
+  flex-direction: column;
+  padding: .30in .32in;
+  overflow: hidden;
+  border: 1.2px solid rgba(184,137,56,.72);
+  border-radius: .04in;
+  background: #fbf5e8;
+  isolation: isolate;
+}
+
+/* Thin inner rule echoing the double line on the welcome poster. */
+#guestbookPrintRoot .print-card::before {
+  content: "";
+  position: absolute;
+  inset: .09in;
+  border: .65px solid rgba(88,25,79,.34);
+  border-radius: .03in;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ---------- corner florals ---------- */
+#guestbookPrintRoot .print-floral {
+  position: absolute;
+  width: .70in;
+  height: .82in;
+  z-index: 1;
+  opacity: .8;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-size: 100% 100%;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 142'%3E%3Cg fill='none' stroke='%23173f2d' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M9 136 C28 104 31 71 51 42 C62 26 74 17 95 8'/%3E%3Cpath d='M31 100 C19 88 12 74 10 59'/%3E%3Cpath d='M45 72 C60 64 72 52 79 37'/%3E%3Cpath d='M23 113 C39 111 51 105 60 94'/%3E%3C/g%3E%3Cg fill='%23266347'%3E%3Cellipse cx='23' cy='82' rx='7' ry='3.2' transform='rotate(37 23 82)'/%3E%3Cellipse cx='39' cy='91' rx='7' ry='3.2' transform='rotate(-20 39 91)'/%3E%3Cellipse cx='50' cy='65' rx='7' ry='3.2' transform='rotate(28 50 65)'/%3E%3Cellipse cx='65' cy='53' rx='7' ry='3.2' transform='rotate(-28 65 53)'/%3E%3Cellipse cx='78' cy='31' rx='7' ry='3.2' transform='rotate(28 78 31)'/%3E%3C/g%3E%3Cg fill='%237a3c73' stroke='%2358194f' stroke-width='1.2'%3E%3Ccircle cx='88' cy='20' r='10'/%3E%3Ccircle cx='96' cy='29' r='7'/%3E%3Ccircle cx='80' cy='30' r='7'/%3E%3Ccircle cx='87' cy='34' r='5'/%3E%3C/g%3E%3Cg fill='%23b88938'%3E%3Ccircle cx='88' cy='28' r='2.6'/%3E%3C/g%3E%3Cg fill='%23a88aa3'%3E%3Ccircle cx='55' cy='101' r='4'/%3E%3Ccircle cx='62' cy='94' r='3'/%3E%3Ccircle cx='68' cy='88' r='2.6'/%3E%3C/g%3E%3C/svg%3E");
+}
+#guestbookPrintRoot .print-floral-tl { top: .05in; left: .05in; }
+#guestbookPrintRoot .print-floral-tr { top: .05in; right: .05in; transform: scaleX(-1); }
+#guestbookPrintRoot .print-floral-bl { bottom: .05in; left: .05in; transform: scaleY(-1); }
+#guestbookPrintRoot .print-floral-br { right: .05in; bottom: .05in; transform: scale(-1,-1); }
+
+/* ---------- front of the card ---------- */
+#guestbookPrintRoot .print-page-header {
+  position: relative;
+  z-index: 3;
+  flex: 0 0 auto;
+  padding-bottom: .10in;
+  text-align: center;
+}
+
+#guestbookPrintRoot .print-page-title {
+  margin: 0;
+  color: var(--purple);
+  font-family: var(--script);
+  font-size: 24pt;
+  font-weight: 400;
+  line-height: 1;
+  letter-spacing: .01em;
+  white-space: nowrap;
+}
+
+#guestbookPrintRoot .print-page-title span {
+  display: inline-block;
+  margin: 0 .06em;
+  color: var(--gold);
+  font-family: var(--serif);
+  font-size: .72em;
+  vertical-align: .08em;
+}
+
+/* The flexible middle. Everything the guest wrote lives in here and the
+   auto-fitter grows the type until this box is as full as it can get. */
+#guestbookPrintRoot .print-front-content {
+  position: relative;
+  z-index: 3;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  text-align: center;
+}
+
+#guestbookPrintRoot .print-body-group {
+  flex: 0 0 auto;          /* must not shrink, or the fitter can't see overflow */
+  width: 100%;
+  max-width: 4.16in;
+  margin: 0 auto;
+  display: block;
+  text-align: center;
+}
+
+#guestbookPrintRoot .print-front .guestbook-photo {
+  display: block;
+  width: auto;
+  max-width: 3.6in;
+  max-height: 1.5in;
+  height: auto;
+  margin: 0 auto .10in;
+  object-fit: contain;
+  border: 2px solid #fffaf0;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+#guestbookPrintRoot .print-front .print-message {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  color: var(--purple);
+  font-family: var(--script);
+  font-size: 36pt;         /* placeholder — replaced inline by host.js */
+  line-height: 1.06;
+  text-align: center;
+  white-space: pre-wrap;   /* keeps the guest's own line breaks */
+  overflow-wrap: anywhere; /* nothing can ever push past the card edge */
+  word-break: normal;
+  hyphens: none;
+}
+
+#guestbookPrintRoot .print-front .guestbook-signature {
+  display: block;
+  width: 100%;
+  margin: .14in 0 0;
+  color: var(--green);
+  font-family: var(--script);
+  font-size: 20pt;         /* placeholder — replaced inline by host.js */
+  line-height: 1.05;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+#guestbookPrintRoot .print-page-date {
+  position: relative;
+  z-index: 3;
+  flex: 0 0 auto;
+  display: block;
+  margin: 0;
+  padding-top: .10in;
+  color: var(--green);
+  font-family: var(--serif);
+  font-size: 12pt;
+  line-height: 1;
+  letter-spacing: .04em;
+  text-align: center;
+}
+
+/* ---------- back of the card: two photo wells, evenly spaced ---------- */
+#guestbookPrintRoot .print-back {
+  justify-content: center;
+}
+
+#guestbookPrintRoot .photo-stack {
+  position: relative;
+  z-index: 3;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: .30in;
+}
+
+#guestbookPrintRoot .photo-placeholder {
+  position: relative;
+  box-sizing: border-box;
+  width: 4.16in;
+  height: 2.50in;
+  flex: 0 0 2.50in;
+  border: 1.1px dashed rgba(88,25,79,.46);
+  background: transparent;
+  transform: none !important;
+  rotate: none !important;
+}
+
+#guestbookPrintRoot .photo-placeholder::after {
+  content: "";
+  position: absolute;
+  inset: .08in;
+  border: .6px solid rgba(184,137,56,.3);
+  pointer-events: none;
+}
+
+@media print {
+  .print-guestbook .ornate-border,
   .print-guestbook .host-header,
-  .print-guestbook .host-sections,
   .print-guestbook .host-shell,
+  .print-guestbook .host-sections,
+  .print-guestbook #guestbookSection,
   .print-guestbook .guestbook-book { display: none !important; }
 
   .print-guestbook #guestbookPrintRoot {
     display: block !important;
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+    z-index: auto !important;
+    opacity: 1 !important;
     width: 11in;
     margin: 0;
   }
 
-  .print-guestbook .print-sheet {
-    width: 11in;
-    height: 8.5in;
-    box-sizing: border-box;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 0;
-    padding: .75in .5in;
-    break-after: page;
-    page-break-after: always;
-  }
-
-  .print-guestbook .print-sheet:last-child {
-    break-after: auto;
-    page-break-after: auto;
-  }
-
-  .print-guestbook .print-card {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    width: 5in;
-    height: 7in;
-    flex: 0 0 5in;
-    box-sizing: border-box;
-    overflow: hidden;
-    border: 1.2px solid rgba(184,137,56,.72);
-    border-radius: .04in;
-    background: #fbf5e8;
-    box-shadow: inset 0 0 0 4px rgba(255,255,255,.58);
-    isolation: isolate;
-  }
-
-  /* A very thin inner line echoes the double-line border on the welcome poster. */
-  .print-guestbook .print-card::before {
-    content: "";
-    position: absolute;
-    inset: .07in;
-    border: .65px solid rgba(88,25,79,.38);
-    border-radius: .03in;
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* Symmetric margins: each 5x7 card is centered within its 5.5-inch half of the sheet. */
-  .print-guestbook .print-front,
-  .print-guestbook .print-back { padding: .16in .18in; }
-
-  .print-guestbook .print-page-header {
-    position: relative;
-    z-index: 3;
-    flex: 0 0 auto;
-    text-align: center;
-    color: var(--purple);
-    padding-top: .02in;
-  }
-
-  .print-guestbook .print-page-title {
-    color: var(--purple);
-    font-family: var(--script);
-    font-size: 25pt;
-    line-height: 1;
-    font-weight: 400;
-    letter-spacing: .01em;
-    white-space: nowrap;
-  }
-
-  .print-guestbook .print-page-title span {
-    display: inline-block;
-    margin: 0 .06em;
-    color: var(--gold);
-    font-family: var(--serif);
-    font-size: .72em;
-    vertical-align: .08em;
-  }
-
-  /* Purple flowers + sage greenery inspired by the party welcome sign. */
-  .print-guestbook .print-floral {
-    position: absolute;
-    width: .78in;
-    height: .92in;
-    z-index: 2;
-    pointer-events: none;
-    opacity: .86;
-    background-repeat: no-repeat;
-    background-size: 100% 100%;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 142'%3E%3Cg fill='none' stroke='%23173f2d' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='M9 136 C28 104 31 71 51 42 C62 26 74 17 95 8'/%3E%3Cpath d='M31 100 C19 88 12 74 10 59'/%3E%3Cpath d='M45 72 C60 64 72 52 79 37'/%3E%3Cpath d='M23 113 C39 111 51 105 60 94'/%3E%3C/g%3E%3Cg fill='%23266347'%3E%3Cellipse cx='23' cy='82' rx='7' ry='3.2' transform='rotate(37 23 82)'/%3E%3Cellipse cx='39' cy='91' rx='7' ry='3.2' transform='rotate(-20 39 91)'/%3E%3Cellipse cx='50' cy='65' rx='7' ry='3.2' transform='rotate(28 50 65)'/%3E%3Cellipse cx='65' cy='53' rx='7' ry='3.2' transform='rotate(-28 65 53)'/%3E%3Cellipse cx='78' cy='31' rx='7' ry='3.2' transform='rotate(28 78 31)'/%3E%3C/g%3E%3Cg fill='%237a3c73' stroke='%2358194f' stroke-width='1.2'%3E%3Ccircle cx='88' cy='20' r='10'/%3E%3Ccircle cx='96' cy='29' r='7'/%3E%3Ccircle cx='80' cy='30' r='7'/%3E%3Ccircle cx='87' cy='34' r='5'/%3E%3C/g%3E%3Cg fill='%23b88938'%3E%3Ccircle cx='88' cy='28' r='2.6'/%3E%3C/g%3E%3Cg fill='%23a88aa3'%3E%3Ccircle cx='55' cy='101' r='4'/%3E%3Ccircle cx='62' cy='94' r='3'/%3E%3Ccircle cx='68' cy='88' r='2.6'/%3E%3C/g%3E%3C/svg%3E");
-  }
-
-  .print-guestbook .print-floral-tl { top: .03in; left: .03in; }
-  .print-guestbook .print-floral-tr { top: .03in; right: .03in; transform: scaleX(-1); }
-  .print-guestbook .print-floral-bl { bottom: .03in; left: .03in; transform: scaleY(-1); }
-  .print-guestbook .print-floral-br { right: .03in; bottom: .03in; transform: scale(-1,-1); }
-
-  .print-guestbook .print-front-content {
-    position: relative;
-    z-index: 3;
-    min-height: 0;
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-block-size: 0;
-    text-align: center;
-    padding: 0;
-    overflow: hidden;
-  }
-
-  .print-guestbook .print-body-group {
-    width: 100%;
-    max-width: 4.20in;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-    margin: 0 auto;
-    min-height: 0;
-  }
-
-  .print-guestbook .print-front .guestbook-photo {
-    flex: 0 0 auto;
-    width: min(3.65in, 100%);
-    max-height: 1.45in;
-    height: auto;
-    object-fit: contain;
-    margin: 0 auto .08in;
-    border: 2px solid #fffaf0;
-    border-radius: 6px;
-  }
-
-  .print-guestbook .print-front .print-message {
-    flex: 0 0 auto;
-    width: 100%;
-    margin: 0;
-    padding: 0 .02in;
-    color: var(--purple);
-    font-family: var(--script);
-    font-size: 82pt;
-    line-height: 1.03;
-    overflow: visible;
-    overflow-wrap: break-word;
-    word-break: normal;
-    white-space: pre-wrap;
-    text-align: center;
-  }
-
-  .print-guestbook .print-front .guestbook-signature {
-    flex: 0 0 auto;
-    margin: .12in 0 0;
-    color: var(--green);
-    font-family: var(--script);
-    font-size: 22pt;
-    line-height: 1;
-    max-width: 100%;
-    overflow-wrap: anywhere;
-    text-align: center;
-  }
-
-  .print-guestbook .print-page-date {
-    position: relative;
-    z-index: 3;
-    flex: 0 0 auto;
-    display: block;
-    margin: auto 0 0;
-    padding-top: .04in;
-    color: var(--green);
-    font-family: var(--serif);
-    font-size: 20pt;
-    line-height: 1;
-    text-align: center;
-  }
-
-  /* Back: decoration + two clean, straight 3x5 photo areas only. */
-  .print-guestbook .print-back {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .print-guestbook .photo-stack {
-    position: relative;
-    z-index: 3;
-    flex: 1 1 auto;
-    min-height: 0;
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: .22in;
-    padding: .06in 0;
-  }
-
-  .print-guestbook .photo-placeholder {
-    position: relative;
-    width: 4.18in;
-    height: 2.51in;
-    flex: 0 0 2.51in;
-    box-sizing: border-box;
-    border: 1.2px dashed rgba(88,25,79,.46);
-    background: rgba(255,255,255,.12);
-    transform: none !important;
-    rotate: none !important;
-  }
-
-  .print-guestbook .photo-placeholder::after {
-    content: "";
-    position: absolute;
-    inset: .08in;
-    border: .6px solid rgba(184,137,56,.32);
-    pointer-events: none;
+  .print-guestbook #guestbookPrintRoot,
+  .print-guestbook #guestbookPrintRoot * {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 }

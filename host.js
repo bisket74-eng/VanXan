@@ -1,4 +1,4 @@
-import { createApi, games, itinerary, anytimeActivities, getPartyTime, minutesFrom24h, config } from "./shared.js?v=8.0.0";
+import { createApi, games, itinerary, anytimeActivities, getPartyTime, minutesFrom24h, config } from "./shared.js?v=8.1.0";
 
 const api = await createApi();
 const cfg = config();
@@ -300,62 +300,57 @@ async function waitForGuestbookPrintImages(root) {
   }));
 }
 
+const GB_PAGE_STYLE_ID = "gbPageStyle";
+
+function addGuestbookPageRule() {
+  if (document.getElementById(GB_PAGE_STYLE_ID)) return;
+  const style = document.createElement("style");
+  style.id = GB_PAGE_STYLE_ID;
+  // Scoped to the guestbook run only, so printing the signed-in list stays portrait.
+  style.textContent = "@media print { @page { size: 11in 8.5in; margin: 0; } html, body { margin: 0; padding: 0; } }";
+  document.head.appendChild(style);
+}
+
+const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve));
+
+/**
+ * Sizes each guest's message to fill its 5x7 card without ever clipping.
+ *
+ * The card geometry lives in normal (non-@media-print) CSS and the whole
+ * print root is staged offscreen at full print size while this runs, so every
+ * measurement below is the exact layout that comes out of the printer.
+ * Nothing is truncated: the type shrinks until the words fit, and grows until
+ * the card is full when the message is short.
+ */
 function fitGuestbookPrintText() {
   const root = document.getElementById("guestbookPrintRoot");
   if (!root) return;
 
-  const MIN_MESSAGE = 18;
-  const MAX_MESSAGE = 82;
-  const MIN_SIGNATURE = 11;
-  const MAX_SIGNATURE = 24;
+  const MESSAGE_MIN = 8;    // pt — long messages never go below this
+  const MESSAGE_MAX = 92;   // pt — a two-word note gets to be huge
+  const SIGNATURE_MIN = 9;
+  const SIGNATURE_MAX = 21;
+  const PRECISION = 0.25;   // pt
 
-  // Measure the actual printed element rather than a detached measuring div.
-  // This is important for Great Vibes: the browser must use the loaded webfont
-  // and the exact same width/line wrapping that will be printed.
-  const fitsActual = (el, fontSize, maxHeight) => {
-    el.style.fontSize = `${fontSize.toFixed(2)}pt`;
-    el.style.lineHeight = "1.03";
-    el.style.maxHeight = "none";
-    el.style.overflow = "visible";
+  const reflow = () => { void root.offsetHeight; };
 
-    // Force layout before reading dimensions.
-    void el.offsetHeight;
-    const height = el.scrollHeight;
-    const width = el.scrollWidth;
-    const availableWidth = el.clientWidth || el.getBoundingClientRect().width;
-    return height <= maxHeight + 2 && width <= availableWidth + 2;
-  };
-
-  const bestActualFontSize = (el, maxHeight, low, high) => {
-    let lo = low;
-    let hi = high;
-    let best = low;
-
-    // First make sure the minimum is actually safe.
-    if (!fitsActual(el, low, maxHeight)) {
-      // If even the minimum cannot fit, keep it at minimum and let the
-      // natural layout use the available width/height.
-      el.style.fontSize = `${low.toFixed(2)}pt`;
-      el.style.lineHeight = "1.03";
-      el.style.maxHeight = `${maxHeight}px`;
-      return low;
-    }
-
-    while (hi - lo > 0.10) {
+  // Binary search for the largest pt size where fits() is still true.
+  const fitFontSize = (el, fits, min, max) => {
+    const at = (size) => {
+      el.style.fontSize = `${size.toFixed(2)}pt`;
+      reflow();
+      return fits();
+    };
+    if (at(max)) return max;
+    if (!at(min)) return min;   // even the floor overflows; keep the floor, clip nothing
+    let lo = min;
+    let hi = max;
+    while (hi - lo > PRECISION) {
       const mid = (lo + hi) / 2;
-      if (fitsActual(el, mid, maxHeight)) {
-        best = mid;
-        lo = mid;
-      } else {
-        hi = mid;
-      }
+      if (at(mid)) lo = mid; else hi = mid;
     }
-
-    el.style.fontSize = `${best.toFixed(2)}pt`;
-    el.style.lineHeight = "1.03";
-    el.style.maxHeight = `${maxHeight}px`;
-    el.style.overflow = "visible";
-    return best;
+    at(lo);
+    return lo;
   };
 
   root.querySelectorAll(".print-front").forEach((card) => {
@@ -364,69 +359,80 @@ function fitGuestbookPrintText() {
     const message = card.querySelector(".print-message");
     const signature = card.querySelector(".guestbook-signature");
     const photo = card.querySelector(".guestbook-photo");
-    if (!content || !group || !message || !signature) return;
+    if (!content || !group || !message) return;
 
-    // Symmetric layout: keep the guest content centered on the 5x7 card.
-    const contentWidth = Math.max(240, group.getBoundingClientRect().width);
-    group.style.width = `${Math.min(contentWidth, 4.18 * 96)}px`;
+    // Start from a clean slate so re-printing doesn't compound old sizes.
+    message.style.fontSize = "";
+    if (signature) signature.style.fontSize = "";
+    if (photo) photo.style.maxHeight = "";
 
-    const contentHeight = Math.max(250, content.getBoundingClientRect().height);
+    // How much vertical room is left in the flexible middle of the card.
+    const slack = () => content.clientHeight - group.getBoundingClientRect().height;
+    const widthOk = (el) => el.scrollWidth <= el.clientWidth + 1;
 
-    // Signature is fitted first so the message gets the remaining room.
-    const sigMaxHeight = Math.max(30, Math.min(60, contentHeight * 0.11));
-    bestActualFontSize(signature, sigMaxHeight, MIN_SIGNATURE, MAX_SIGNATURE);
-    signature.style.lineHeight = "1";
+    // 1. Park the message at its floor so the signature is measured fairly.
+    message.style.fontSize = `${MESSAGE_MIN}pt`;
+    reflow();
 
-    let photoHeight = 0;
-    if (photo) {
-      const naturalRatio = photo.naturalWidth && photo.naturalHeight
-        ? photo.naturalHeight / photo.naturalWidth
-        : 0.6;
-      photoHeight = Math.min(1.25 * 96, Math.max(0.5 * 96, contentWidth * naturalRatio));
-      photo.style.width = `${Math.min(3.65 * 96, contentWidth)}px`;
-      photo.style.maxHeight = `${photoHeight}px`;
-      photo.style.height = "auto";
-      photo.style.objectFit = "contain";
+    // 2. Signature: sized on its own, capped so it never eats the message's room.
+    if (signature) {
+      const sigCap = Math.min(0.62 * 96, content.clientHeight * 0.16);
+      fitFontSize(
+        signature,
+        () => signature.scrollHeight <= sigCap + 1 && widthOk(signature) && slack() >= -0.5,
+        SIGNATURE_MIN,
+        SIGNATURE_MAX
+      );
     }
 
-    const photoGap = photo ? 0.07 * 96 : 0;
-    const signatureGap = 0.10 * 96;
-    const messageHeight = Math.max(
-      1.35 * 96,
-      contentHeight - photoHeight - photoGap - sigMaxHeight - signatureGap - 0.04 * 96
+    // 3. Message: take every pixel that's left over.
+    fitFontSize(
+      message,
+      () => slack() >= -0.5 && widthOk(message),
+      MESSAGE_MIN,
+      MESSAGE_MAX
     );
-
-    // Start large and shrink only when the actual rendered text truly needs it.
-    bestActualFontSize(message, messageHeight, MIN_MESSAGE, MAX_MESSAGE);
-    message.style.lineHeight = "1.03";
-    message.style.maxHeight = `${messageHeight}px`;
-    message.style.overflow = "visible";
   });
 }
 
 function printMode(className) {
-  if (className === "print-guestbook") buildGuestbookPrint();
+  const isGuestbook = className === "print-guestbook";
+  if (isGuestbook) {
+    buildGuestbookPrint();
+    addGuestbookPageRule();
+  }
   document.body.classList.add(className);
+
+  let cleaned = false;
   const cleanup = () => {
-    document.body.classList.remove(className);
+    if (cleaned) return;
+    cleaned = true;
+    document.body.classList.remove(className, "gb-measuring");
     document.getElementById("guestbookPrintRoot")?.remove();
+    document.getElementById(GB_PAGE_STYLE_ID)?.remove();
   };
   addEventListener("afterprint", cleanup, { once: true });
-  requestAnimationFrame(async () => {
-    requestAnimationFrame(async () => {
-      if (className === "print-guestbook") {
-        const root = document.getElementById("guestbookPrintRoot");
-        await waitForGuestbookPrintImages(root);
-        if (document.fonts?.ready) await document.fonts.ready;
-        // Allow one layout frame after the web fonts are ready so the fitting
-        // calculation uses the same typography that will actually print.
-        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-        fitGuestbookPrintText();
-      }
-      print();
-      setTimeout(cleanup, 1500);
-    });
-  });
+
+  (async () => {
+    if (isGuestbook) {
+      const root = document.getElementById("guestbookPrintRoot");
+      // Stage the sheets offscreen at true print size so we can measure them.
+      document.body.classList.add("gb-measuring");
+      await waitForGuestbookPrintImages(root);
+      if (document.fonts?.ready) { try { await document.fonts.ready; } catch { /* ignore */ } }
+      await nextFrame();
+      await nextFrame();
+      fitGuestbookPrintText();
+      await nextFrame();
+      document.body.classList.remove("gb-measuring");
+      await nextFrame();
+    } else {
+      await nextFrame();
+      await nextFrame();
+    }
+    print();
+    setTimeout(cleanup, 1500);
+  })();
 }
 
 function toggleCompactForm(id) {

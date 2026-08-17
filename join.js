@@ -1,4 +1,4 @@
-import { createApi, games, itinerary, anytimeActivities, getPartyTime, minutesFrom24h, config } from "./shared.js?v=8.0.0";
+import { createApi, games, itinerary, anytimeActivities, getPartyTime, minutesFrom24h, config } from "./shared.js?v=8.1.0";
 
 const api = await createApi();
 const cfg = config();
