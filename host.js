@@ -305,10 +305,10 @@ function fitGuestbookPrintText() {
   if (!root) return;
 
   const IN = 96;
-  const MIN_MESSAGE = 10;
-  const MAX_MESSAGE = 40;
+  const MIN_MESSAGE = 12;
+  const MAX_MESSAGE = 64;
   const MIN_SIGNATURE = 11;
-  const MAX_SIGNATURE = 22;
+  const MAX_SIGNATURE = 24;
 
   const measure = document.createElement("div");
   measure.setAttribute("aria-hidden", "true");
@@ -336,14 +336,14 @@ function fitGuestbookPrintText() {
     measure.style.fontSize = `${fontSize}pt`;
     measure.style.lineHeight = String(lineHeight);
     measure.textContent = text || "";
-    return measure.scrollHeight <= maxHeight + 0.5 && measure.scrollWidth <= width + 0.5;
+    return measure.scrollHeight <= maxHeight + 1 && measure.scrollWidth <= width + 1;
   };
 
-  const bestFontSize = ({ text, fontFamily, fontWeight, fontStyle, width, maxHeight, low = MIN_MESSAGE, high = MAX_MESSAGE, lineHeight = 1.08 }) => {
+  const bestFontSize = ({ text, fontFamily, fontWeight, fontStyle, width, maxHeight, low, high, lineHeight }) => {
     let lo = low;
     let hi = high;
     let best = low;
-    while (hi - lo > 0.15) {
+    while (hi - lo > 0.10) {
       const mid = (lo + hi) / 2;
       if (fits(mid, fontFamily, fontWeight, fontStyle, width, maxHeight, lineHeight, text)) {
         best = mid;
@@ -363,12 +363,13 @@ function fitGuestbookPrintText() {
     const photo = card.querySelector(".guestbook-photo");
     if (!content || !group || !message || !signature) return;
 
-    // Measure the real print geometry after the 5x7 card has been laid out.
-    const width = Math.max(220, group.getBoundingClientRect().width - 4);
+    // Use the actual laid-out 5x7 geometry. The front has a larger left
+    // binding margin, so the usable writing width is the group's real width.
+    const width = Math.max(220, group.getBoundingClientRect().width - 2);
     const contentHeight = Math.max(250, content.getBoundingClientRect().height);
 
     const sigStyle = getComputedStyle(signature);
-    const sigMaxHeight = Math.max(24, Math.min(0.55 * IN, contentHeight * 0.16));
+    const sigMaxHeight = Math.max(28, Math.min(0.62 * IN, contentHeight * 0.14));
     const sigSize = bestFontSize({
       text: signature.textContent || "",
       fontFamily: sigStyle.fontFamily,
@@ -381,25 +382,27 @@ function fitGuestbookPrintText() {
       lineHeight: 1
     });
     signature.style.fontSize = `${sigSize.toFixed(2)}pt`;
+    signature.style.lineHeight = "1";
 
-    // Keep any real guest photo, but reserve its rendered height before fitting the message.
     let photoHeight = 0;
     if (photo) {
       const naturalRatio = photo.naturalWidth && photo.naturalHeight
         ? photo.naturalHeight / photo.naturalWidth
         : 0.6;
-      photoHeight = Math.min(1.35 * IN, Math.max(0.55 * IN, width * naturalRatio));
-      photo.style.width = `${Math.min(3.65 * IN, width)}px`;
+      photoHeight = Math.min(1.25 * IN, Math.max(0.5 * IN, width * naturalRatio));
+      photo.style.width = `${Math.min(3.55 * IN, width)}px`;
       photo.style.maxHeight = `${photoHeight}px`;
       photo.style.height = "auto";
       photo.style.objectFit = "contain";
     }
 
-    const photoGap = photo ? 0.08 * IN : 0;
+    const photoGap = photo ? 0.07 * IN : 0;
     const signatureGap = 0.10 * IN;
+    // Give the message nearly all of the available vertical space. The
+    // flex container then centers the complete message + signature group.
     const messageHeight = Math.max(
-      0.75 * IN,
-      contentHeight - photoHeight - photoGap - sigMaxHeight - signatureGap
+      1.15 * IN,
+      contentHeight - photoHeight - photoGap - sigMaxHeight - signatureGap - 0.05 * IN
     );
 
     const msgStyle = getComputedStyle(message);
@@ -412,11 +415,11 @@ function fitGuestbookPrintText() {
       maxHeight: messageHeight,
       low: MIN_MESSAGE,
       high: MAX_MESSAGE,
-      lineHeight: 1.08
+      lineHeight: 1.03
     });
 
     message.style.fontSize = `${messageSize.toFixed(2)}pt`;
-    message.style.lineHeight = "1.08";
+    message.style.lineHeight = "1.03";
     message.style.maxHeight = `${messageHeight}px`;
   });
 
@@ -435,6 +438,10 @@ function printMode(className) {
       if (className === "print-guestbook") {
         const root = document.getElementById("guestbookPrintRoot");
         await waitForGuestbookPrintImages(root);
+        if (document.fonts?.ready) await document.fonts.ready;
+        // Allow one layout frame after the web fonts are ready so the fitting
+        // calculation uses the same typography that will actually print.
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         fitGuestbookPrintText();
       }
       print();

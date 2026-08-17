@@ -688,8 +688,9 @@ hr { margin: 18px 0; border: 0; border-top: 1px solid var(--line); }
     z-index: 0;
   }
 
-  .print-guestbook .print-front { padding: .16in .27in .16in .55in; }
-  .print-guestbook .print-back  { padding: .16in .55in .16in .27in; }
+  /* Binding-safe inner margins: fronts bind on the left; backs mirror to the right. */
+  .print-guestbook .print-front { padding: .16in .18in .16in .62in; }
+  .print-guestbook .print-back  { padding: .16in .62in .16in .18in; }
 
   .print-guestbook .print-page-header {
     position: relative;
@@ -754,7 +755,7 @@ hr { margin: 18px 0; border: 0; border-top: 1px solid var(--line); }
 
   .print-guestbook .print-body-group {
     width: 100%;
-    max-width: 4.18in;
+    max-width: 4.20in;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -782,8 +783,8 @@ hr { margin: 18px 0; border: 0; border-top: 1px solid var(--line); }
     padding: 0 .02in;
     color: var(--purple);
     font-family: var(--script);
-    font-size: 40pt;
-    line-height: 1.08;
+    font-size: 64pt;
+    line-height: 1.03;
     overflow: visible;
     overflow-wrap: break-word;
     word-break: normal;
@@ -835,7 +836,7 @@ hr { margin: 18px 0; border: 0; border-top: 1px solid var(--line); }
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: .18in;
+    gap: .22in;
     padding: .06in 0;
   }
 
