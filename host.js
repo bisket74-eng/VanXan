@@ -262,15 +262,17 @@ function buildGuestbookPrint() {
             <div class="print-page-title">Savannah <span aria-hidden="true">♥</span> Xander</div>
           </header>
           <div class="print-front-content">
-            ${photoUrl ? `<img class="guestbook-photo" src="${esc(photoUrl)}" alt="Guestbook photo from ${esc(entry.names.join(" and "))}">` : ""}
-            <blockquote class="print-message">${esc(message)}</blockquote>
-            <div class="guestbook-signature">${entry.names.map(esc).join(" &amp; ")}</div>
+            <div class="print-body-group">
+              ${photoUrl ? `<img class="guestbook-photo" src="${esc(photoUrl)}" alt="Guestbook photo from ${esc(entry.names.join(" and "))}">` : ""}
+              <blockquote class="print-message">${esc(message)}</blockquote>
+              <div class="guestbook-signature">${entry.names.map(esc).join(" &amp; ")}</div>
+            </div>
           </div>
           <time class="print-page-date">${esc(formatPrintDate(entry.created_at))}</time>
         </article>`;
     }).join("");
 
-    const backs = pair.map((entry) => `
+    const backs = pair.map(() => `
       <article class="print-card print-back">
         <span class="print-floral print-floral-tl" aria-hidden="true"></span><span class="print-floral print-floral-tr" aria-hidden="true"></span><span class="print-floral print-floral-bl" aria-hidden="true"></span><span class="print-floral print-floral-br" aria-hidden="true"></span>
         <div class="photo-stack" aria-label="Two 3 by 5 photo spots">
@@ -287,15 +289,27 @@ function buildGuestbookPrint() {
   return printRoot;
 }
 
+async function waitForGuestbookPrintImages(root) {
+  const images = [...root.querySelectorAll("img.guestbook-photo")];
+  await Promise.all(images.map((img) => {
+    if (img.complete) return img.decode ? img.decode().catch(() => {}) : Promise.resolve();
+    return new Promise((resolve) => {
+      img.addEventListener("load", resolve, { once: true });
+      img.addEventListener("error", resolve, { once: true });
+    });
+  }));
+}
+
 function fitGuestbookPrintText() {
   const root = document.getElementById("guestbookPrintRoot");
   if (!root) return;
 
-  // The print stylesheet is inside @media print, so the browser does not
-  // apply the final card dimensions while the print dialog is being prepared.
-  // Measure each message in a hidden element using the exact print width,
-  // then set the chosen font size inline. This prevents long entries from
-  // being clipped instead of shrinking to fit.
+  const IN = 96;
+  const MIN_MESSAGE = 10;
+  const MAX_MESSAGE = 40;
+  const MIN_SIGNATURE = 11;
+  const MAX_SIGNATURE = 22;
+
   const measure = document.createElement("div");
   measure.setAttribute("aria-hidden", "true");
   measure.style.cssText = [
@@ -303,10 +317,9 @@ function fitGuestbookPrintText() {
     "left:-100000px",
     "top:0",
     "visibility:hidden",
-    "width:4.15in",
     "box-sizing:border-box",
-    "white-space:normal",
-    "overflow-wrap:anywhere",
+    "white-space:pre-wrap",
+    "overflow-wrap:break-word",
     "word-break:normal",
     "text-align:center",
     "padding:0",
@@ -315,52 +328,96 @@ function fitGuestbookPrintText() {
   ].join(";");
   document.body.appendChild(measure);
 
-  root.querySelectorAll(".print-front").forEach((card) => {
-    const message = card.querySelector(".print-message");
-    if (!message) return;
+  const fits = (fontSize, fontFamily, fontWeight, fontStyle, width, maxHeight, lineHeight, text) => {
+    measure.style.width = `${width}px`;
+    measure.style.fontFamily = fontFamily;
+    measure.style.fontWeight = fontWeight;
+    measure.style.fontStyle = fontStyle;
+    measure.style.fontSize = `${fontSize}pt`;
+    measure.style.lineHeight = String(lineHeight);
+    measure.textContent = text || "";
+    return measure.scrollHeight <= maxHeight + 0.5 && measure.scrollWidth <= width + 0.5;
+  };
 
-    const computed = getComputedStyle(message);
-    measure.style.fontFamily = computed.fontFamily;
-    measure.style.fontWeight = computed.fontWeight;
-    measure.style.fontStyle = computed.fontStyle;
-    measure.style.letterSpacing = computed.letterSpacing;
-    measure.style.lineHeight = computed.lineHeight;
-    measure.textContent = message.textContent || "";
-
-    // Most of the 7-inch page is available to the message. Leave room for
-    // the title, signature, date, and the decorative breathing space.
-    const availableHeight = 4.82 * 96;
-    let low = 10;
-    let high = 38;
+  const bestFontSize = ({ text, fontFamily, fontWeight, fontStyle, width, maxHeight, low = MIN_MESSAGE, high = MAX_MESSAGE, lineHeight = 1.08 }) => {
+    let lo = low;
+    let hi = high;
     let best = low;
-
-    // Binary-search the largest size that keeps the COMPLETE message inside
-    // the available print area.
-    while (high - low > 0.25) {
-      const mid = (low + high) / 2;
-      measure.style.fontSize = `${mid}pt`;
-      measure.style.lineHeight = "1.08";
-      if (measure.scrollHeight <= availableHeight) {
+    while (hi - lo > 0.15) {
+      const mid = (lo + hi) / 2;
+      if (fits(mid, fontFamily, fontWeight, fontStyle, width, maxHeight, lineHeight, text)) {
         best = mid;
-        low = mid;
+        lo = mid;
       } else {
-        high = mid;
+        hi = mid;
       }
     }
+    return best;
+  };
 
-    message.style.fontSize = `${best.toFixed(2)}pt`;
-    message.style.lineHeight = "1.08";
-    message.style.maxHeight = `${availableHeight}px`;
-    message.style.overflow = "visible";
-  });
+  root.querySelectorAll(".print-front").forEach((card) => {
+    const content = card.querySelector(".print-front-content");
+    const group = card.querySelector(".print-body-group");
+    const message = card.querySelector(".print-message");
+    const signature = card.querySelector(".guestbook-signature");
+    const photo = card.querySelector(".guestbook-photo");
+    if (!content || !group || !message || !signature) return;
 
-  root.querySelectorAll(".guestbook-signature").forEach((signature) => {
-    let size = 22;
-    signature.style.fontSize = `${size}pt`;
-    while (size > 12 && signature.scrollWidth > signature.clientWidth + 1) {
-      size -= 0.5;
-      signature.style.fontSize = `${size}pt`;
+    // Measure the real print geometry after the 5x7 card has been laid out.
+    const width = Math.max(220, group.getBoundingClientRect().width - 4);
+    const contentHeight = Math.max(250, content.getBoundingClientRect().height);
+
+    const sigStyle = getComputedStyle(signature);
+    const sigMaxHeight = Math.max(24, Math.min(0.55 * IN, contentHeight * 0.16));
+    const sigSize = bestFontSize({
+      text: signature.textContent || "",
+      fontFamily: sigStyle.fontFamily,
+      fontWeight: sigStyle.fontWeight,
+      fontStyle: sigStyle.fontStyle,
+      width,
+      maxHeight: sigMaxHeight,
+      low: MIN_SIGNATURE,
+      high: MAX_SIGNATURE,
+      lineHeight: 1
+    });
+    signature.style.fontSize = `${sigSize.toFixed(2)}pt`;
+
+    // Keep any real guest photo, but reserve its rendered height before fitting the message.
+    let photoHeight = 0;
+    if (photo) {
+      const naturalRatio = photo.naturalWidth && photo.naturalHeight
+        ? photo.naturalHeight / photo.naturalWidth
+        : 0.6;
+      photoHeight = Math.min(1.35 * IN, Math.max(0.55 * IN, width * naturalRatio));
+      photo.style.width = `${Math.min(3.65 * IN, width)}px`;
+      photo.style.maxHeight = `${photoHeight}px`;
+      photo.style.height = "auto";
+      photo.style.objectFit = "contain";
     }
+
+    const photoGap = photo ? 0.08 * IN : 0;
+    const signatureGap = 0.10 * IN;
+    const messageHeight = Math.max(
+      0.75 * IN,
+      contentHeight - photoHeight - photoGap - sigMaxHeight - signatureGap
+    );
+
+    const msgStyle = getComputedStyle(message);
+    const messageSize = bestFontSize({
+      text: message.textContent || "",
+      fontFamily: msgStyle.fontFamily,
+      fontWeight: msgStyle.fontWeight,
+      fontStyle: msgStyle.fontStyle,
+      width,
+      maxHeight: messageHeight,
+      low: MIN_MESSAGE,
+      high: MAX_MESSAGE,
+      lineHeight: 1.08
+    });
+
+    message.style.fontSize = `${messageSize.toFixed(2)}pt`;
+    message.style.lineHeight = "1.08";
+    message.style.maxHeight = `${messageHeight}px`;
   });
 
   measure.remove();
@@ -373,9 +430,13 @@ function printMode(className) {
     document.getElementById("guestbookPrintRoot")?.remove();
   };
   addEventListener("afterprint", cleanup, { once: true });
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      if (className === "print-guestbook") fitGuestbookPrintText();
+  requestAnimationFrame(async () => {
+    requestAnimationFrame(async () => {
+      if (className === "print-guestbook") {
+        const root = document.getElementById("guestbookPrintRoot");
+        await waitForGuestbookPrintImages(root);
+        fitGuestbookPrintText();
+      }
       print();
       setTimeout(cleanup, 1500);
     });
