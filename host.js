@@ -257,10 +257,9 @@ function buildGuestbookPrint() {
       const message = entry.message ? entry.message : "Congratulations and best of luck!";
       return `
         <article class="print-card print-front">
-          <span class="page-web top-left" aria-hidden="true"></span><span class="page-web bottom-right" aria-hidden="true"></span>
+          <span class="print-floral print-floral-tl" aria-hidden="true"></span><span class="print-floral print-floral-br" aria-hidden="true"></span>
           <header class="print-page-header">
-            <div class="page-ornament">❦ ♡ ❦</div>
-            <div class="print-page-title">Savannah &amp; Xander's<br>Engagement Party Guest Book</div>
+            <div class="print-page-title">Savannah <span aria-hidden="true">♥</span> Xander</div>
           </header>
           <div class="print-front-content">
             ${photoUrl ? `<img class="guestbook-photo" src="${esc(photoUrl)}" alt="Guestbook photo from ${esc(entry.names.join(" and "))}">` : ""}
@@ -273,16 +272,11 @@ function buildGuestbookPrint() {
 
     const backs = pair.map((entry) => `
       <article class="print-card print-back">
-        <span class="page-web top-left" aria-hidden="true"></span><span class="page-web bottom-right" aria-hidden="true"></span>
-        <header class="print-page-header">
-          <div class="page-ornament">❦ ♡ ❦</div>
-          <div class="print-page-title">Savannah &amp; Xander's<br>Engagement Party Guest Book</div>
-        </header>
+        <span class="print-floral print-floral-tl" aria-hidden="true"></span><span class="print-floral print-floral-br" aria-hidden="true"></span>
         <div class="photo-stack" aria-label="Two 3 by 5 photo spots">
           <div class="photo-placeholder photo-one" aria-label="Top 3 by 5 photo spot"></div>
           <div class="photo-placeholder photo-two" aria-label="Bottom 3 by 5 photo spot"></div>
         </div>
-        <time class="print-page-date">${esc(formatPrintDate(entry.created_at))}</time>
       </article>`).join("");
 
     return `
@@ -297,17 +291,30 @@ function fitGuestbookPrintText() {
   const root = document.getElementById("guestbookPrintRoot");
   if (!root) return;
 
-  root.querySelectorAll(".print-message").forEach((message) => {
-    let size = 17;
+  root.querySelectorAll(".print-front").forEach((card) => {
+    const message = card.querySelector(".print-message");
+    if (!message) return;
+
+    // Start large so short and medium messages use the page generously,
+    // then shrink only as much as necessary to keep the complete entry on the card.
+    let size = 28;
+    const minSize = 11;
     message.style.fontSize = `${size}pt`;
-    while (message.scrollHeight > message.clientHeight + 1 && size > 9.5) {
+
+    // Give the message the full space available between the header, optional photo,
+    // signature and date.  Measure the natural height rather than relying on a
+    // small fixed max-height so every entry can use the space it actually has.
+    const available = Math.max(80, message.parentElement.clientHeight * 0.78);
+    message.style.maxHeight = `${available}px`;
+
+    while (message.scrollHeight > message.clientHeight + 1 && size > minSize) {
       size -= 0.5;
       message.style.fontSize = `${size}pt`;
     }
   });
 
   root.querySelectorAll(".guestbook-signature").forEach((signature) => {
-    let size = 20;
+    let size = 22;
     signature.style.fontSize = `${size}pt`;
     while (signature.scrollWidth > signature.clientWidth + 1 && size > 12) {
       size -= 0.5;

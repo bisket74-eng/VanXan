@@ -805,40 +805,56 @@ hr { margin: 18px 0; border: 0; border-top: 1px solid var(--line); }
     box-sizing: border-box;
     overflow: hidden;
     border: 1.5px solid rgba(184,137,56,.62);
-    background: linear-gradient(145deg, #fffdf8, #f9efe0);
+    background: linear-gradient(145deg, #fffdf8 0%, #f9efe0 100%);
     box-shadow: inset 0 0 0 6px rgba(255,255,255,.52);
   }
 
-  /* Binding/cutting margins mirror on the back so duplex pages line up correctly. */
-  .print-guestbook .print-front { padding: .34in .28in .28in .55in; }
-  .print-guestbook .print-back  { padding: .34in .55in .28in .28in; }
+  /* The front has the wider inside/binding margin on the left. The back mirrors it. */
+  .print-guestbook .print-front { padding: .30in .27in .25in .55in; }
+  .print-guestbook .print-back  { padding: .25in .55in .25in .27in; }
 
   .print-guestbook .print-page-header {
     position: relative;
     z-index: 2;
     flex: 0 0 auto;
     text-align: center;
-    color: var(--green);
-  }
-
-  .print-guestbook .print-page-header .page-ornament {
-    margin: 0 0 .035in;
-    color: var(--gold);
-    font-family: var(--serif);
-    font-size: 12pt;
-    line-height: 1;
-    letter-spacing: .16em;
+    color: var(--purple);
   }
 
   .print-guestbook .print-page-title {
     color: var(--purple);
-    font-family: var(--serif);
-    font-size: 13.5pt;
-    line-height: 1.08;
-    font-weight: 750;
-    letter-spacing: .045em;
-    text-transform: uppercase;
+    font-family: var(--script);
+    font-size: 24pt;
+    line-height: 1;
+    font-weight: 400;
+    letter-spacing: .01em;
+    white-space: nowrap;
   }
+
+  .print-guestbook .print-page-title span {
+    display: inline-block;
+    margin: 0 .06em;
+    color: var(--gold);
+    font-family: var(--serif);
+    font-size: .72em;
+    vertical-align: .08em;
+  }
+
+  /* Reuses the same delicate floral line-art language used elsewhere on the party site. */
+  .print-guestbook .print-floral {
+    position: absolute;
+    width: .62in;
+    height: .62in;
+    z-index: 1;
+    pointer-events: none;
+    opacity: .48;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 118 118'%3E%3Cg fill='none' stroke='%2358194f' stroke-width='1.7' stroke-linecap='round' stroke-linejoin='round' opacity='.72'%3E%3Cpath d='M0 0L118 0 M0 0L109 45.2 M0 0L83.4 83.4 M0 0L45.2 109 M0 0L0 118'/%3E%3Cpath d='M30 0Q24.4 4.9 27.7 11.5Q20.7 13.8 21.2 21.2Q13.8 20.7 11.5 27.7Q4.9 24.4 0 30'/%3E%3Cpath d='M52 0Q42.3 8.4 48 19.9Q35.9 24 36.8 36.8Q24 35.9 19.9 48Q8.4 42.3 0 52'/%3E%3Cpath d='M74 0Q60.2 12 68.4 28.3Q51.1 34.1 52.3 52.3Q34.1 51.1 28.3 68.4Q12 60.2 0 74'/%3E%3Cpath d='M96 0Q78.1 15.5 88.7 36.7Q66.3 44.3 67.9 67.9Q44.3 66.3 36.7 88.7Q15.5 78.1 0 96'/%3E%3C/g%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-size: 100% 100%;
+  }
+
+  .print-guestbook .print-floral-tl { top: .04in; left: .04in; }
+  .print-guestbook .print-floral-br { right: .04in; bottom: .04in; transform: rotate(180deg); }
 
   .print-guestbook .print-front-content {
     position: relative;
@@ -850,43 +866,46 @@ hr { margin: 18px 0; border: 0; border-top: 1px solid var(--line); }
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding: .12in 0 .08in;
+    padding: .12in .02in .08in;
     overflow: hidden;
   }
 
   .print-guestbook .print-front .guestbook-photo {
     flex: 0 0 auto;
-    width: min(3.65in, 100%);
-    max-height: 1.65in;
+    width: min(3.55in, 100%);
+    max-height: 1.25in;
     margin: 0 auto .08in;
     object-fit: cover;
-    border: 3px solid #fffaf0;
-    border-radius: 8px;
+    border: 2px solid #fffaf0;
+    border-radius: 6px;
     box-shadow: none;
   }
 
   .print-guestbook .print-front .print-message {
     flex: 0 1 auto;
     width: 100%;
-    max-height: 3.35in;
+    max-height: 4.55in;
     margin: 0;
+    padding: 0 .02in;
     color: var(--purple);
     font-family: var(--script);
-    font-size: 17pt;
+    font-size: 28pt;
     line-height: 1.08;
     overflow: hidden;
     overflow-wrap: anywhere;
+    text-align: center;
   }
 
   .print-guestbook .print-front .guestbook-signature {
     flex: 0 0 auto;
-    margin: .09in 0 0;
+    margin: .11in 0 0;
     color: var(--green);
     font-family: var(--script);
-    font-size: 20pt;
+    font-size: 22pt;
     line-height: 1;
     max-width: 100%;
     overflow-wrap: anywhere;
+    text-align: center;
   }
 
   .print-guestbook .print-page-date {
@@ -894,19 +913,23 @@ hr { margin: 18px 0; border: 0; border-top: 1px solid var(--line); }
     z-index: 2;
     flex: 0 0 auto;
     display: block;
-    margin: .04in 0 0;
+    margin: .03in 0 0;
     color: var(--muted);
     font-family: var(--serif);
-    font-size: 11pt;
+    font-size: 14pt;
     line-height: 1;
     text-align: center;
   }
 
+  /* Back: deliberately nothing except the two straight 3x5 photo boxes and the paper treatment. */
   .print-guestbook .print-back {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
   }
+
+  .print-guestbook .print-back .print-floral { display: none; }
 
   .print-guestbook .photo-stack {
     position: relative;
@@ -918,47 +941,32 @@ hr { margin: 18px 0; border: 0; border-top: 1px solid var(--line); }
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: .12in;
-    padding: .08in 0 .08in;
+    gap: .18in;
+    padding: .05in 0;
   }
 
-  /* Two landscape 3x5 photo spots, stacked vertically. */
+  /* Two landscape 3x5 photo spots, stacked vertically with no rotation or offset. */
   .print-guestbook .photo-placeholder {
     position: relative;
-    width: 4.1in;
+    width: 4.10in;
     height: 2.46in;
     flex: 0 0 2.46in;
     box-sizing: border-box;
     border: 1.5px dashed rgba(88,25,79,.42);
-    background: rgba(255,255,255,.28);
+    background: rgba(255,255,255,.18);
+    rotate: none !important;
+    transform: none !important;
   }
 
   .print-guestbook .photo-placeholder::after {
-    content: "3 × 5 PHOTO";
+    content: "";
     position: absolute;
     inset: 0;
-    display: grid;
-    place-items: center;
-    color: rgba(88,25,79,.36);
-    font-family: var(--serif);
-    font-size: 9pt;
-    letter-spacing: .12em;
   }
 
   .print-guestbook .print-front::before,
-  .print-guestbook .print-front::after,
-  .print-guestbook .print-back::before,
-  .print-guestbook .print-back::after {
-    content: "❦";
-    position: absolute;
-    color: rgba(88,25,79,.18);
-    font-size: 38pt;
-    line-height: 1;
-    z-index: 0;
+  .print-guestbook .print-front::after {
+    content: none !important;
   }
-
-  .print-guestbook .print-front::before,
-  .print-guestbook .print-back::before { top: -.08in; left: .08in; rotate: -18deg; }
-  .print-guestbook .print-front::after,
-  .print-guestbook .print-back::after { right: .08in; bottom: -.08in; rotate: 162deg; }
 }
+
