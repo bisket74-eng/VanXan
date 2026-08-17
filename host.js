@@ -182,7 +182,7 @@ function renderGuestbook() {
         <div class="page-ornament">❦ ♡ ❦</div>
         <p class="guestbook-page-label">Savannah &amp; Xander’s Guestbook</p>
         ${photoUrl ? `<img class="guestbook-photo" src="${escapeHtml(photoUrl)}" alt="Guestbook photo from ${escapeHtml(entry.names.join(" and "))}">` : ""}
-        <blockquote>${entry.message ? escapeHtml(entry.message) : "Thank you for celebrating with us!"}</blockquote>
+        <blockquote>${entry.message ? escapeHtml(entry.message) : "Congratulations and best of luck!"}</blockquote>
         <div class="guestbook-signature">${entry.names.map(escapeHtml).join(" &amp; ")}</div>
         <time>${escapeHtml(formatDate(entry.created_at))}</time>
         <button class="edit-book-message secondary-button" type="button">Edit Message</button>
